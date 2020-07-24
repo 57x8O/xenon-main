@@ -325,7 +325,10 @@ class BackupLoader:
                 except wkr.NotFound:
                     break
 
-                except wkr.DiscordException:
+                except asyncio.CancelledError:
+                    raise
+
+                except:
                     continue
 
             await self.client.delete_webhook(webhook)
