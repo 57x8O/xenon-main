@@ -367,7 +367,7 @@ class BackupLoader:
         )
 
         for key, loader in loaders:
-            if self.options.get(key):
+            if key == "" or self.options.get(key):
                 try:
                     await loader()
                 except wkr.CommandError:
