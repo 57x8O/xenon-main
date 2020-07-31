@@ -70,6 +70,9 @@ class BackupSaver:
         messages = self.data["messages"] = {}
 
         for channel in self.guild.channels:
+            if channel.type == wkr.ChannelType.GUILD_VOICE or channel.type == wkr.ChannelType.GUILD_CATEGORY:
+                continue
+
             try:
                 messages[channel.id] = [
                     {
@@ -286,6 +289,9 @@ class BackupLoader:
     async def _load_messages(self):
         self.status = "loading messages"
 
+        # Sending messages to too many webhooks at the same time gets you ip banned pretty fast
+        semaphore = asyncio.Semaphore(value=5)
+
         async def _load_in_channel(channel):
             messages = self.data.get("messages", {}).get(channel["id"], [])
             if len(messages) <= 0:
@@ -295,45 +301,49 @@ class BackupLoader:
             if new_id is None:
                 return
 
-            webhook = await self.client.create_webhook(wkr.Snowflake(new_id), name="backup")
-            for msg in reversed(messages[:self.chatlog]):
-                author = wkr.User(msg["author"])
+            try:
+                webhook = await self.client.create_webhook(wkr.Snowflake(new_id), name="backup")
+                for msg in reversed(messages[:self.chatlog]):
+                    author = wkr.User(msg["author"])
 
-                attachments = msg.get("attachments", [])
-                files = []
+                    attachments = msg.get("attachments", [])
+                    files = []
 
-                async def _fetch_attachment(attachment):
-                    async with self.client.session.get(attachment["url"]) as resp:
-                        if resp.status == 200:
-                            fp = io.BytesIO(await resp.read())
-                            files.append(wkr.File(fp, filename=attachment["filename"]))
+                    async def _fetch_attachment(attachment):
+                        async with self.client.session.get(attachment["url"]) as resp:
+                            if resp.status == 200:
+                                fp = io.BytesIO(await resp.read())
+                                files.append(wkr.File(fp, filename=attachment["filename"]))
 
-                file_tasks = [self.client.schedule(_fetch_attachment(att)) for att in attachments]
-                if file_tasks:
-                    await asyncio.wait(file_tasks, return_when=asyncio.ALL_COMPLETED)
+                    file_tasks = [self.client.schedule(_fetch_attachment(att)) for att in attachments]
+                    if file_tasks:
+                        await asyncio.wait(file_tasks, return_when=asyncio.ALL_COMPLETED)
 
-                try:
-                    await self.client.execute_webhook(
-                        webhook,
-                        wait=True,
-                        username=author.name,
-                        avatar_url=author.avatar_url,
-                        allowed_mentions={"parse": []},
-                        files=files,
-                        **msg
-                    )
-                except wkr.NotFound:
-                    break
+                    try:
+                        await self.client.execute_webhook(
+                            webhook,
+                            wait=True,
+                            username=author.name,
+                            avatar_url=author.avatar_url,
+                            allowed_mentions={"parse": []},
+                            files=files,
+                            **msg
+                        )
+                    except wkr.NotFound:
+                        break
 
-                except asyncio.CancelledError:
-                    raise
+                    except asyncio.CancelledError:
+                        raise
 
-                except:
-                    continue
+                    except:
+                        traceback.print_exc()
 
-            await self.client.delete_webhook(webhook)
+                await self.client.delete_webhook(webhook)
+            finally:
+                semaphore.release()
 
         for _channel in self.data["channels"]:
+            await semaphore.acquire()
             self.client.schedule(_load_in_channel(_channel))
 
     async def _load(self, chatlog, **options):
