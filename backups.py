@@ -290,18 +290,18 @@ class BackupLoader:
         self.status = "loading messages"
 
         # Sending messages to too many webhooks at the same time gets you ip banned pretty fast
-        semaphore = asyncio.Semaphore(value=5)
+        semaphore = asyncio.Semaphore(value=10)
 
         async def _load_in_channel(channel):
-            messages = self.data.get("messages", {}).get(channel["id"], [])
-            if len(messages) <= 0:
-                return
-
-            new_id = self.id_translator.get(channel["id"])
-            if new_id is None:
-                return
-
             try:
+                messages = self.data.get("messages", {}).get(channel["id"], [])
+                if len(messages) <= 0:
+                    return
+
+                new_id = self.id_translator.get(channel["id"])
+                if new_id is None:
+                    return
+
                 webhook = await self.client.create_webhook(wkr.Snowflake(new_id), name="backup")
                 for msg in reversed(messages[:self.chatlog]):
                     author = wkr.User(msg["author"])
@@ -318,6 +318,10 @@ class BackupLoader:
                     file_tasks = [self.client.schedule(_fetch_attachment(att)) for att in attachments]
                     if file_tasks:
                         await asyncio.wait(file_tasks, return_when=asyncio.ALL_COMPLETED)
+
+                    if len(files) == 0 and len(msg.get("embeds", [])) == 0 and len(msg.get("content", "")) == 0:
+                        # The message is considered empty
+                        continue
 
                     try:
                         await self.client.execute_webhook(
@@ -339,6 +343,7 @@ class BackupLoader:
                         traceback.print_exc()
 
                 await self.client.delete_webhook(webhook)
+
             finally:
                 semaphore.release()
 
