@@ -2,9 +2,6 @@ from bot import Xenon
 from os import environ as env
 
 
-raise ValueError(env.get("TOKEN"))
-
-
 bot = Xenon(
     prefix=env.get("PREFIX") or "#!",
     mongo_url=env.get("MONGO_URL") or "mongodb://localhost",
