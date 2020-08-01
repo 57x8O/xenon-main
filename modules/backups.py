@@ -535,6 +535,7 @@ class Backups(wkr.Module):
             }})
 
     @backup.command(aliases=("invites",))
+    @wkr.has_permissions(administrator=True)
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def invite(self, ctx, backup_id):
         """
@@ -566,6 +567,7 @@ class Backups(wkr.Module):
                          f"**not enabled**.\nEnabled it with `x?backup invite on {backup_id}`.")
 
     @invite.command(aliases=("enable",))
+    @wkr.has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def on(self, ctx, backup_id):
@@ -596,6 +598,7 @@ class Backups(wkr.Module):
                             f"\n\n__Constant Url__: https://xenon.bot/iv/{backup_id}")
 
     @invite.command(aliases=("disable",))
+    @wkr.has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def off(self, ctx, backup_id):
