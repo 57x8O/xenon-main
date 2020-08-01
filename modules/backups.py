@@ -536,7 +536,7 @@ class Backups(wkr.Module):
 
     @backup.command(aliases=("invites",))
     @wkr.has_permissions(administrator=True)
-    @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
+    @wkr.cooldown(1, 10)
     async def invite(self, ctx, backup_id):
         """
         Create a constant invite that always points to the server where the backup was last loaded
@@ -569,7 +569,7 @@ class Backups(wkr.Module):
     @invite.command(aliases=("enable",))
     @wkr.has_permissions(administrator=True)
     @checks.is_premium()
-    @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
+    @wkr.cooldown(1, 10)
     async def on(self, ctx, backup_id):
         """
         Enables the constant backup invite which always points to the last server where the backup was loaded
@@ -600,7 +600,7 @@ class Backups(wkr.Module):
     @invite.command(aliases=("disable",))
     @wkr.has_permissions(administrator=True)
     @checks.is_premium()
-    @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
+    @wkr.cooldown(1, 10)
     async def off(self, ctx, backup_id):
         """
         Disables the constant automatic backup invite
