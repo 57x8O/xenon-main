@@ -169,12 +169,20 @@ class BackupLoader:
             channel["type"] = 0 if channel["type"] > 4 else channel["type"]
 
             if "parent_id" in channel.keys():
-                channel["parent_id"] = self.id_translator.get(channel["parent_id"], channel["parent_id"])
+                if channel["parent_id"] in self.id_translator:
+                    channel["parent_id"] = self.id_translator[channel["parent_id"]]
+
+                else:
+                    del channel["parent_id"]
 
             overwrites = channel.get("permission_overwrites", [])
+            new_overwrites = []
             for overwrite in overwrites:
                 if overwrite["id"] in self.id_translator:
                     overwrite["id"] = self.id_translator[overwrite["id"]]
+                    new_overwrites.append(overwrite)
+
+            channel["permission_overwrites"] = new_overwrites[:100]
 
             return channel
 
