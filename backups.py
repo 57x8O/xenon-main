@@ -117,7 +117,6 @@ class BackupLoader:
         self.data = data
 
         self.invite = None
-        self._invite_channel = None
 
         self.chatlog = None
         self.options = Options(
@@ -246,9 +245,6 @@ class BackupLoader:
                 try:
                     new = await self.client.create_channel(self.guild, **_tune_channel(channel), reason=self.reason)
                     self.id_translator[channel["id"]] = new.id
-                    if new.type == wkr.ChannelType.GUILD_TEXT:
-                        self._invite_channel = new
-
                 except wkr.DiscordException:
                     traceback.print_exc()
 
@@ -365,8 +361,15 @@ class BackupLoader:
             self.client.schedule(_load_in_channel(_channel))
 
     async def _load_invite(self):
-        if self._invite_channel is not None:
-            self.invite = await self.client.create_invite(self._invite_channel, reason="Constant backup invite")
+        text_channels = [c for c in self.data["channels"] if c["type"] == wkr.ChannelType.GUILD_TEXT.value]
+        if len(text_channels) == 0:
+            return
+
+        new_id = self.id_translator.get(text_channels[0]["id"])
+        if new_id is None:
+            return
+
+        self.invite = await self.client.create_invite(wkr.Snowflake(new_id), reason="Constant backup invite")
 
     async def _load(self, chatlog, **options):
         self.chatlog = chatlog
