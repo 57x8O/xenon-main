@@ -45,6 +45,7 @@ class Backups(wkr.Module):
         await self.bot.db.backups.create_index([("timestamp", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("data.id", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("msg_retention", pymongo.ASCENDING)])
+        await self.bot.db.backups.create_index([("const_invite", pymongo.ASCENDING)])
         await self.bot.db.id_translators.create_index(
             [("guild_id", pymongo.ASCENDING), ("backup_id", pymongo.ASCENDING)],
             unique=True
@@ -218,6 +219,9 @@ class Backups(wkr.Module):
             }},
             upsert=True
         )
+
+        if backup.invite is not None:
+            await ctx.bot.db.backups.update_one({"_id": backup_id}, {"$set": {"invite": backup.invite["code"]}})
 
     @backup.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)
@@ -529,6 +533,92 @@ class Backups(wkr.Module):
             await self.bot.db.intervals.update_one({"_id": guild_id}, {"$set": {
                 "next": interval["next"] + timedelta(hours=interval["interval"])
             }})
+
+    @backup.command(aliases=("invites",))
+    @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
+    async def invite(self, ctx, backup_id):
+        """
+        Shows where the invite for the backup_id currently points to
+
+
+        __Arguments__
+
+        **backup_id**: The id of the backup or the guild id of the latest automated backup
+
+
+        __Examples__
+
+        ```{b.prefix}backup invite oj1xky11871fzrbu```
+        """
+        data = await ctx.bot.db.backups.find_one(
+            {"_id": backup_id, "creator": ctx.author.id},
+            projection=("const_invite", "invite")
+        )
+        if data is None:
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+
+        if data.get("const_invite"):
+            raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id}` is **enabled**."
+                             f"\n\n__Constant Url__: https://xenon.bot/iv/{backup_id}"
+                             f"\n__Current Invite__: https://discord.gg/{data.get('invite')}")
+
+        raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id}` is **not enabled**.")
+
+    @invite.command(aliases=("enable",))
+    @checks.is_premium()
+    @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
+    async def on(self, ctx, backup_id):
+        """
+        Enables the constant backup invite which always points to the last server where the backup was loaded
+
+
+        __Arguments__
+
+        **backup_id**: The id of the backup or the guild id of the latest automated backup
+
+
+        __Examples__
+
+        ```{b.prefix}backup invite on oj1xky11871fzrbu```
+        """
+        result = await ctx.bot.db.backups.update_one(
+            {"_id": backup_id, "creator": ctx.author.id},
+            {"$set": {"const_invite": True}}
+        )
+        if result.matched_count == 0:
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+
+        raise ctx.f.SUCCESS(f"The **constant backup invite** is now **enabled** and will always point to "
+                            f"the last server where the backup was loaded.\n"
+                            f"*Keep in mind that this will only start working after the backup "
+                            f"was loaded for the first time*."
+                            f"\n\n__Constant Url__: https://xenon.bot/iv/{backup_id}")
+
+    @invite.command(aliases=("disable",))
+    @checks.is_premium()
+    @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
+    async def off(self, ctx, backup_id):
+        """
+        Disables the constant automatic backup invite
+
+
+        __Arguments__
+
+        **backup_id**: The id of the backup or the guild id of the latest automated backup
+
+
+        __Examples__
+
+        ```{b.prefix}backup invite off oj1xky11871fzrbu```
+        """
+        result = await ctx.bot.db.backups.update_one(
+            {"_id": backup_id, "creator": ctx.author.id},
+            {"$set": {"const_invite": False}}
+        )
+        if result.matched_count == 0:
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+
+        raise ctx.f.SUCCESS("Successfully **disabled the automatic backup invite**.")
 
     async def _store_backup(self, creator_id, backup_id, data, **options):
         try:

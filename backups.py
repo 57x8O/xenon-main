@@ -116,6 +116,9 @@ class BackupLoader:
         self.guild = guild
         self.data = data
 
+        self.invite = None
+        self._invite_channel = None
+
         self.chatlog = None
         self.options = Options(
             settings=True,
@@ -124,7 +127,8 @@ class BackupLoader:
             channels=True,
             delete_channels=True,
             members=True,
-            bans=False
+            bans=False,
+            invite=True
         )
         self.id_translator = {data["id"]: guild.id}
         self.reason = reason
@@ -213,9 +217,9 @@ class BackupLoader:
                 channel["bitrate"] = min(channel["bitrate"], 96000)
 
             # News and store channels require special features
-            if (channel["type"] == wkr.ChannelType.GUILD_NEWS and "NEWS" not in self.guild.features) or \
-                    (channel["type"] == wkr.ChannelType.GUILD_STORE and "COMMERCE" not in self.guild.features):
-                channel["type"] = 0
+            if (channel["type"] == wkr.ChannelType.GUILD_NEWS.value and "NEWS" not in self.guild.features) or \
+                    (channel["type"] == wkr.ChannelType.GUILD_STORE.value and "COMMERCE" not in self.guild.features):
+                channel["type"] = wkr.ChannelType.GUILD_TEXT.value
 
             channel["type"] = 0 if channel["type"] > 4 else channel["type"]
 
@@ -237,27 +241,28 @@ class BackupLoader:
 
             return channel
 
+        async def _create_channels(channels_):
+            for channel in channels_:
+                try:
+                    new = await self.client.create_channel(self.guild, **_tune_channel(channel), reason=self.reason)
+                    self.id_translator[channel["id"]] = new.id
+                    if new.type == wkr.ChannelType.GUILD_TEXT:
+                        self._invite_channel = new
+
+                except wkr.DiscordException:
+                    traceback.print_exc()
+
         no_parent = sorted(
             filter(lambda c: c.get("parent_id") is None, self.data["channels"]),
             key=lambda c: c.get("position")
         )
-        for channel in no_parent:
-            try:
-                new = await self.client.create_channel(self.guild, **_tune_channel(channel), reason=self.reason)
-                self.id_translator[channel["id"]] = new.id
-            except wkr.DiscordException:
-                traceback.print_exc()
+        await _create_channels(no_parent)
 
         has_parent = sorted(
             filter(lambda c: c.get("parent_id") is not None, self.data["channels"]),
             key=lambda c: c["position"]
         )
-        for channel in has_parent:
-            try:
-                new = await self.client.create_channel(self.guild, **_tune_channel(channel), reason=self.reason)
-                self.id_translator[channel["id"]] = new.id
-            except wkr.DiscordException:
-                traceback.print_exc()
+        await _create_channels(has_parent)
 
     async def _load_bans(self):
         self.status = "loading bans"
@@ -359,6 +364,10 @@ class BackupLoader:
             await semaphore.acquire()
             self.client.schedule(_load_in_channel(_channel))
 
+    async def _load_invite(self):
+        if self._invite_channel is not None:
+            self.invite = await self.client.create_invite(self._invite_channel, reason="Constant backup invite")
+
     async def _load(self, chatlog, **options):
         self.chatlog = chatlog
         self.options.update(**options)
@@ -371,7 +380,8 @@ class BackupLoader:
             ("bans", self._load_bans),
             ("members", self._load_members),
             ("", self._load_messages),
-            ("settings", self._load_settings)
+            ("settings", self._load_settings),
+            ("invite", self._load_invite)
         )
 
         for key, loader in loaders:
