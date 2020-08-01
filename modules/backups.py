@@ -6,6 +6,7 @@ from pymongo import errors as mongoerrors
 from datetime import datetime, timedelta
 import random
 
+import checks
 from backups import BackupSaver, BackupLoader
 
 
@@ -48,6 +49,19 @@ class Backups(wkr.Module):
         Create & load private backups of your servers
         """
         await ctx.invoke("help backup")
+
+    @backup.command(hidden=True)
+    @checks.is_staff(level=checks.StaffLevel.ADMIN)
+    async def transfer(self, ctx, backup_id, user: wkr.UserConverter):
+        """
+        Transfer a backup to the specified user
+        """
+        user = await user(ctx)
+        res = await ctx.bot.db.backups.update_one({"_id": backup_id}, {"$set": {"creator": str(user.id)}})
+        if res.matched_count == 0:
+            raise ctx.f.ERROR(f"There is **no backup** with the id `{backup_id}`.")
+
+        raise ctx.f.SUCCESS(f"Successfully transferred backup.")
 
     @backup.command(aliases=("c",))
     @wkr.guild_only
