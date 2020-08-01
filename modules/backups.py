@@ -538,7 +538,7 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def invite(self, ctx, backup_id):
         """
-        Shows where the invite for the backup_id currently points to
+        Create a constant invite that always points to the server where the backup was last loaded
 
 
         __Arguments__
@@ -562,7 +562,8 @@ class Backups(wkr.Module):
                              f"\n\n__Constant Url__: https://xenon.bot/iv/{backup_id}"
                              f"\n__Current Invite__: https://discord.gg/{data.get('invite')}")
 
-        raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id}` is **not enabled**.")
+        raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id}` is "
+                         f"**not enabled**.\nEnabled it with `x?backup invite on {backup_id}`.")
 
     @invite.command(aliases=("enable",))
     @checks.is_premium()
