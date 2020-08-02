@@ -397,17 +397,22 @@ class Backups(wkr.Module):
                     {
                         "name": "Last Backup",
                         "value": utils.datetime_to_string(interval["last"]),
-                        "inline": True
+                        "inline": False
                     },
                     {
                         "name": "Next Backup",
                         "value": utils.datetime_to_string(interval["next"]),
-                        "inline": True
+                        "inline": False
                     },
                     {
                         "name": "Keep",
                         "value": interval.get("keep", 1),
-                        "inline": "False"
+                        "inline": True
+                    },
+                    {
+                        "name": "Chatlog",
+                        "value": interval.get("chatlog", 0),
+                        "inline": True
                     }
                 ]
             })
