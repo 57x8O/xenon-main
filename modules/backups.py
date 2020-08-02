@@ -42,6 +42,7 @@ class Backups(wkr.Module):
         await self.bot.db.backups.create_index([("creator", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("timestamp", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("data.id", pymongo.ASCENDING)])
+        await self.bot.db.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
 
     @wkr.Module.command(aliases=("backups", "bu"))
     async def backup(self, ctx):
@@ -326,7 +327,7 @@ class Backups(wkr.Module):
             await ctx.invoke("backup interval on " + " ".join(interval))
             return
 
-        interval = await ctx.bot.db.intervals.find_one({"_id": ctx.guild_id})
+        interval = await ctx.bot.db.intervals.find_one({"guild": ctx.guild_id, "user": ctx.author.id})
         if interval is None:
             raise ctx.f.INFO("The **backup interval is** currently turned **off**.\n"
                              f"Turn it on with `{ctx.bot.prefix}backup interval on 24h`.")
@@ -388,8 +389,9 @@ class Backups(wkr.Module):
 
         now = datetime.utcnow()
         td = timedelta(hours=hours)
-        await ctx.bot.db.intervals.update_one({"_id": ctx.guild_id}, {"$set": {
-            "_id": ctx.guild_id,
+        await ctx.bot.db.intervals.update_one({"guild": ctx.guild_id, "user": ctx.author.id}, {"$set": {
+            "guild": ctx.guild_id,
+            "user": ctx.author.id,
             "last": now,
             "next": now,
             "interval": hours
@@ -410,35 +412,35 @@ class Backups(wkr.Module):
 
         ```{b.prefix}backup interval off```
         """
-        result = await ctx.bot.db.intervals.delete_one({"_id": ctx.guild_id})
+        result = await ctx.bot.db.intervals.delete_one({"guild": ctx.guild_id, "user": ctx.author.id})
         if result.deleted_count > 0:
             raise ctx.f.SUCCESS("Successfully **disabled the backup interval**.")
 
         else:
             raise ctx.f.ERROR(f"The backup interval is not enabled.")
 
-    async def run_interval_backups(self, guild_id):
-        guild = await self.bot.get_full_guild(guild_id)
-        if guild is None:
-            return
-
-        backup = BackupSaver(self.bot, guild)
-        await backup.save()
-
-        await self.bot.db.backups.replace_one({"_id": guild_id}, {
-            "_id": guild_id,
-            "creator": guild.owner_id,
-            "timestamp": datetime.utcnow(),
-            "interval": True,
-            "data": backup.data
-        }, upsert=True)
-
-    @wkr.Module.task(minutes=random.randint(5, 15))
+    @wkr.Module.task(minutes=random.random(5, 15))
     async def interval_task(self):
+        async def _run_interval_backups(interval):
+            guild = await self.bot.get_full_guild(interval["guild"])
+            if guild is None:
+                return
+
+            backup = BackupSaver(self.bot, guild)
+            await backup.save()
+
+            await self.bot.db.backups.delete_one({"creator": interval["user"], "data.id": guild.id})
+            await self.bot.db.backups.insert_one({
+                "_id": utils.unique_id(),
+                "creator": interval["user"],
+                "timestamp": datetime.utcnow(),
+                "interval": True,
+                "data": backup.data
+            })
+
         to_backup = self.bot.db.intervals.find({"next": {"$lt": datetime.utcnow()}})
         async for interval in to_backup:
-            guild_id = interval["_id"]
-            self.bot.schedule(self.run_interval_backups(guild_id))
-            await self.bot.db.intervals.update_one({"_id": guild_id}, {"$set": {
+            self.bot.schedule(_run_interval_backups(interval))
+            await self.bot.db.intervals.update_one({"_id": interval["_id"]}, {"$set": {
                 "next": interval["next"] + timedelta(hours=interval["interval"])
             }})
