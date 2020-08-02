@@ -344,6 +344,11 @@ class Backups(wkr.Module):
                         "inline": True
                     },
                     {
+                        "name": "Last Backup",
+                        "value": utils.datetime_to_string(interval["last"]),
+                        "inline": True
+                    },
+                    {
                         "name": "Next Backup",
                         "value": utils.datetime_to_string(interval["next"]),
                         "inline": True
@@ -419,7 +424,7 @@ class Backups(wkr.Module):
         else:
             raise ctx.f.ERROR(f"The backup interval is not enabled.")
 
-    @wkr.Module.task(minutes=random.random(5, 15))
+    @wkr.Module.task(minutes=random.randint(5, 15))
     async def interval_task(self):
         async def _run_interval_backups(interval):
             guild = await self.bot.get_full_guild(interval["guild"])
