@@ -157,7 +157,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id of the latest automated backup
+        **backup_id**: The id of the backup
         **chatlog**: The count of messages to load per channel
         **options**: A list of options (See examples)
 
@@ -306,7 +306,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id to for latest automated backup
+        **backup_id**: The id of the backup
 
 
         __Examples__
