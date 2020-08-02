@@ -43,6 +43,10 @@ class Backups(wkr.Module):
         await self.bot.db.backups.create_index([("timestamp", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("data.id", pymongo.ASCENDING)])
         await self.bot.db.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
+        await self.bot.db.id_translators.create_index(
+            [("guild_id", pymongo.ASCENDING), ("backup_id", pymongo.ASCENDING)],
+            unique=True
+        )
 
     @wkr.Module.command(aliases=("backups", "bu"))
     async def backup(self, ctx):
@@ -147,7 +151,8 @@ class Backups(wkr.Module):
                                        f"Please put the managed role called `{ctx.bot.user.name}` above all other "
                                        f"roles before clicking the ✅ reaction.\n\n"
                                        "__**All channels and roles will get replaced!**__\n\n"
-                                       "*Also keep in mind that you can only load up to 250 roles per day.*", f=ctx.f.WARNING)
+                                       "*Also keep in mind that you can only load up to 250 roles per day.*",
+                                       f=ctx.f.WARNING)
         reactions = ("✅", "❌")
         for reaction in reactions:
             await ctx.client.add_reaction(warning_msg, reaction)
@@ -172,6 +177,18 @@ class Backups(wkr.Module):
         guild = await ctx.get_full_guild()
         backup = BackupLoader(ctx.client, guild, backup_d["data"], reason="Backup loaded by " + str(ctx.author))
         await backup.load(**utils.backup_options(options))
+        await ctx.bot.db.id_translators.update_one(
+            {
+                "guild_id": ctx.guild_id,
+                "backup_id": backup_id,
+            },
+            {"$set": {
+                "guild_id": ctx.guild_id,
+                "backup_id": backup_id,
+                "ids": backup.id_translator
+            }},
+            upsert=True
+        )
 
     @backup.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)
