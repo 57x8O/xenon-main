@@ -534,7 +534,7 @@ class Backups(wkr.Module):
                 "next": interval["next"] + timedelta(hours=interval["interval"])
             }})
 
-    @backup.command(aliases=("invites",))
+    @backup.command(aliases=("invites", "inv"))
     @wkr.has_permissions(administrator=True)
     @wkr.cooldown(1, 10)
     async def invite(self, ctx, backup_id):
