@@ -20,7 +20,7 @@ class ChatlogListMenu(wkr.ListMenu):
                 "creator": self.ctx.author.id,
             }
         }
-        chatlogs = self.ctx.bot.db.chatlogs.find(**args)
+        chatlogs = self.ctx.bot.db.premium.chatlogs.find(**args)
         items = []
         async for chatlog in chatlogs:
             items.append((
@@ -34,9 +34,8 @@ class ChatlogListMenu(wkr.ListMenu):
 class Chatlog(wkr.Module):
     @wkr.Module.listener()
     async def on_load(self, *_, **__):
-        await self.bot.db.chatlogs.create_index([("creator", pymongo.ASCENDING)])
-        await self.bot.db.chatlogs.create_index([("timestamp", pymongo.ASCENDING)])
-        await self.bot.db.backups.create_index([("msg_retention", pymongo.ASCENDING)])
+        await self.bot.db.premium.chatlogs.create_index([("creator", pymongo.ASCENDING)])
+        await self.bot.db.premium.chatlogs.create_index([("timestamp", pymongo.ASCENDING)])
 
     @wkr.Module.task(hours=24)
     async def message_retention(self):
@@ -136,7 +135,7 @@ class Chatlog(wkr.Module):
             count = min(count, 1000)
             max_chatlogs = 100
 
-        chatlog_count = await ctx.bot.db.chatlogs.count_documents({"creator": ctx.author.id})
+        chatlog_count = await ctx.bot.db.premium.chatlogs.count_documents({"creator": ctx.author.id})
         if chatlog_count >= max_chatlogs:
             raise ctx.f.ERROR(
                 f"You have **exceeded the maximum count** of chatlog. (`{chatlog_count}/{max_chatlogs}`)\n"
@@ -147,7 +146,7 @@ class Chatlog(wkr.Module):
         status_msg = await ctx.f_send("**Creating Chatlog** ...", f=ctx.f.WORKING)
         data = await self._create_chatlog(ctx.channel_id, count)
         chatlog_id = utils.unique_id()
-        await ctx.bot.db.chatlogs.insert_one({
+        await ctx.bot.db.premium.chatlogs.insert_one({
             "_id": chatlog_id,
             "msg_retention": True,
             "creator": ctx.author.id,
@@ -185,7 +184,7 @@ class Chatlog(wkr.Module):
 
         Load 100 messages: ```{b.prefix}chatlog load oj1xky11871fzrbu 100```
         """
-        chatlog_d = await ctx.client.db.chatlogs.find_one({"_id": chatlog_id, "creator": ctx.author.id})
+        chatlog_d = await ctx.client.db.premium.chatlogs.find_one({"_id": chatlog_id, "creator": ctx.author.id})
         if chatlog_d is None:
             raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id}`.")
 
@@ -226,7 +225,7 @@ class Chatlog(wkr.Module):
 
         ```{b.prefix}chatlog delete 3zpssue46g```
         """
-        result = await ctx.client.db.chatlogs.delete_one({"_id": chatlog_id, "creator": ctx.author.id})
+        result = await ctx.client.db.premium.chatlogs.delete_one({"_id": chatlog_id, "creator": ctx.author.id})
         if result.deleted_count > 0:
             raise ctx.f.SUCCESS("Successfully **deleted chatlog**.")
 
@@ -268,7 +267,7 @@ class Chatlog(wkr.Module):
         if data["emoji"]["name"] != "✅":
             return
 
-        await ctx.client.db.chatlogs.delete_many({"creator": ctx.author.id})
+        await ctx.client.db.premium.chatlogs.delete_many({"creator": ctx.author.id})
         raise ctx.f.SUCCESS("Successfully **deleted all your chatlogs**.")
 
     @chatlog.command(aliases=("ls",))
@@ -301,7 +300,7 @@ class Chatlog(wkr.Module):
 
         ```{b.prefix}chatlog info 3zpssue46g```
         """
-        chatlog = await ctx.client.db.chatlogs.find_one({"_id": chatlog_id, "creator": ctx.author.id})
+        chatlog = await ctx.client.db.premium.chatlogs.find_one({"_id": chatlog_id, "creator": ctx.author.id})
         if chatlog is None:
             raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id}`.")
 
