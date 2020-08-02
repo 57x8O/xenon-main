@@ -51,6 +51,7 @@ class Backups(wkr.Module):
             unique=True
         )
         self.grid_fs = AsyncIOMotorGridFSBucket(self.bot.db, "backup_blobs", chunk_size_bytes=8000000)
+        await self.bot.db.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
 
     @wkr.Module.task(hours=24)
     async def message_retention(self):
@@ -377,7 +378,7 @@ class Backups(wkr.Module):
             await ctx.invoke("backup interval on " + " ".join(interval))
             return
 
-        interval = await ctx.bot.db.intervals.find_one({"_id": ctx.guild_id})
+        interval = await ctx.bot.db.intervals.find_one({"guild": ctx.guild_id, "user": ctx.author.id})
         if interval is None:
             raise ctx.f.INFO("The **backup interval is** currently turned **off**.\n"
                              f"Turn it on with `{ctx.bot.prefix}backup interval on 24h`.")
@@ -470,8 +471,9 @@ class Backups(wkr.Module):
 
         now = datetime.utcnow()
         td = timedelta(hours=hours)
-        await ctx.bot.db.intervals.update_one({"_id": ctx.guild_id}, {"$set": {
-            "_id": ctx.guild_id,
+        await ctx.bot.db.intervals.update_one({"guild": ctx.guild_id, "user": ctx.author.id}, {"$set": {
+            "guild": ctx.guild_id,
+            "user": ctx.author.id,
             "last": now,
             "next": now,
             "keep": keep,
@@ -495,42 +497,39 @@ class Backups(wkr.Module):
 
         ```{b.prefix}backup interval off```
         """
-        result = await ctx.bot.db.intervals.delete_one({"_id": ctx.guild_id})
+        result = await ctx.bot.db.intervals.delete_one({"guild": ctx.guild_id, "user": ctx.author.id})
         if result.deleted_count > 0:
             raise ctx.f.SUCCESS("Successfully **disabled the backup interval**.")
 
         else:
             raise ctx.f.ERROR(f"The backup interval is not enabled.")
 
-    async def run_interval_backup(self, guild_id, keep=1, chatlog=0):
-        guild = await self.bot.get_full_guild(guild_id)
-        if guild is None:
-            return
-
-        existing = self.bot.db.backups.find({"data.id": guild_id, "interval": True},
-                                            sort=[("timestamp", pymongo.DESCENDING)])
-        counter = 0
-        async for backup in existing:
-            counter += 1
-            if counter >= keep:
-                await self.bot.db.backups.delete_one({"_id": backup["_id"]})
-
-        backup = BackupSaver(self.bot, guild)
-        await backup.save(chatlog=chatlog)
-
-        await self._store_backup(guild.owner_id, utils.unique_id(), backup.data, interval=True)
-
     @wkr.Module.task(minutes=random.randint(5, 15))
     async def interval_task(self):
+        async def _run_interval_backup(interval):
+            guild = await self.bot.get_full_guild(interval["guild"])
+            if guild is None:
+                return
+
+            existing = self.bot.db.backups.find(
+                {"data.id": interval["guild"], "interval": True, "creator": interval["user"]},
+                sort=[("timestamp", pymongo.DESCENDING)]
+            )
+            counter = 0
+            async for backup in existing:
+                counter += 1
+                if counter >= interval.get("keep", 1):
+                    await self.bot.db.backups.delete_one({"_id": backup["_id"]})
+
+            backup = BackupSaver(self.bot, guild)
+            await backup.save(chatlog=interval.get("chatlog", 0))
+
+            await self._store_backup(interval["user"], utils.unique_id(), backup.data, interval=True)
+
         to_backup = self.bot.db.intervals.find({"next": {"$lt": datetime.utcnow()}})
         async for interval in to_backup:
-            guild_id = interval["_id"]
-            self.bot.schedule(self.run_interval_backup(
-                guild_id,
-                keep=interval.get("keep", 1),
-                chatlog=interval.get("chatlog", 0)
-            ))
-            await self.bot.db.intervals.update_one({"_id": guild_id}, {"$set": {
+            self.bot.schedule(_run_interval_backup(interval))
+            await self.bot.db.intervals.update_one({"_id": interval["_id"]}, {"$set": {
                 "next": interval["next"] + timedelta(hours=interval["interval"])
             }})
 
