@@ -44,7 +44,7 @@ class Backups(wkr.Module):
         await self.bot.db.backups.create_index([("data.id", pymongo.ASCENDING)])
         await self.bot.db.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
         await self.bot.db.id_translators.create_index(
-            [("guild_id", pymongo.ASCENDING), ("backup_id", pymongo.ASCENDING)],
+            [("source_id", pymongo.ASCENDING), ("target_id", pymongo.ASCENDING)],
             unique=True
         )
 
@@ -177,15 +177,20 @@ class Backups(wkr.Module):
         guild = await ctx.get_full_guild()
         backup = BackupLoader(ctx.client, guild, backup_d["data"], reason="Backup loaded by " + str(ctx.author))
         await backup.load(**utils.backup_options(options))
+
+        unpacked_ids = {
+            f"ids.{s}": t
+            for s, t in backup.id_translator.items()
+        }
         await ctx.bot.db.id_translators.update_one(
             {
-                "guild_id": ctx.guild_id,
-                "backup_id": backup_id,
+                "target_id": ctx.guild_id,
+                "source_id": backup.data["id"],
             },
             {"$set": {
-                "guild_id": ctx.guild_id,
-                "backup_id": backup_id,
-                "ids": backup.id_translator
+                "target_id": ctx.guild_id,
+                "source_id": backup.data["id"],
+                **unpacked_ids
             }},
             upsert=True
         )
