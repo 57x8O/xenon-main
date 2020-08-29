@@ -83,7 +83,29 @@ class Copy(wkr.Module):
         await ctx.client.edit_message(status_msg, **ctx.f.format(f"**Starting to copy** ...", f=ctx.f.WORKING))
 
         loader = BackupLoader(ctx.client, target_guild, backup.data, reason="Copied by " + str(ctx.author))
+
+        translator = await ctx.bot.db.id_translators.find_one({"target_id": ctx.guild_id, "source_id": loader.data["id"]})
+        if translator is not None:
+            loader.id_translator.update(translator["ids"])
+
         await loader.load(chatlog, **utils.backup_options(options))
+
+        unpacked_ids = {
+            f"ids.{s}": t
+            for s, t in loader.id_translator.items()
+        }
+        await ctx.bot.db.id_translators.update_one(
+            {
+                "target_id": ctx.guild_id,
+                "source_id": loader.data["id"],
+            },
+            {"$set": {
+                "target_id": ctx.guild_id,
+                "source_id": loader.data["id"],
+                **unpacked_ids
+            }},
+            upsert=True
+        )
 
     @copy.command(aliases=('msg',))
     @wkr.guild_only
