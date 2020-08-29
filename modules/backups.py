@@ -47,7 +47,7 @@ class Backups(wkr.Module):
         await self.bot.db.backups.create_index([("msg_retention", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("const_invite", pymongo.ASCENDING)])
         await self.bot.db.id_translators.create_index(
-            [("guild_id", pymongo.ASCENDING), ("backup_id", pymongo.ASCENDING)],
+            [("source_id", pymongo.ASCENDING), ("target_id", pymongo.ASCENDING)],
             unique=True
         )
         self.grid_fs = AsyncIOMotorGridFSBucket(self.bot.db, "backup_blobs", chunk_size_bytes=8000000)
@@ -203,20 +203,25 @@ class Backups(wkr.Module):
         backup = BackupLoader(ctx.client, guild, backup_d["data"], reason="Backup loaded by " + str(ctx.author))
 
         # Inject previous id translators if available
-        translator = await ctx.bot.db.id_translators.find_one({"guild_id": ctx.guild_id, "backup_id": backup_id})
+        translator = await ctx.bot.db.id_translators.find_one({"target_id": ctx.guild_id, "source_id": backup.data["id"]})
         if translator is not None:
             backup.id_translator.update(translator["ids"])
 
         await backup.load(chatlog, **utils.backup_options(options))
+
+        unpacked_ids = {
+            f"ids.{s}": t
+            for s, t in backup.id_translator.items()
+        }
         await ctx.bot.db.id_translators.update_one(
             {
-                "guild_id": ctx.guild_id,
-                "backup_id": backup_id,
+                "target_id": ctx.guild_id,
+                "source_id": backup.data["id"],
             },
             {"$set": {
-                "guild_id": ctx.guild_id,
-                "backup_id": backup_id,
-                "ids": backup.id_translator
+                "target_id": ctx.guild_id,
+                "source_id": backup.data["id"],
+                **unpacked_ids
             }},
             upsert=True
         )
