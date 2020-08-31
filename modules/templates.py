@@ -22,9 +22,10 @@ class TemplateListMenu(wkr.ListMenu):
         args = {
             "limit": 10,
             "skip": self.page * 10,
-            "sort": [("featured", pymongo.DESCENDING), ("uses", pymongo.DESCENDING)],
+            "sort": [("upvote_count", pymongo.DESCENDING), ("usage_count", pymongo.DESCENDING)],
             "filter": {
-                "approved": True
+                "approved": True,
+                "internal": True
             }
         }
         if self.search != "":
@@ -32,7 +33,7 @@ class TemplateListMenu(wkr.ListMenu):
                 "$search": self.search
             }
 
-        templates = self.ctx.bot.db.templates.find(**args)
+        templates = self.ctx.bot.mongo.dtpl.templates.find(**args)
         items = []
         async for template in templates:
             items.append((
@@ -52,11 +53,13 @@ class Templates(wkr.Module):
 
     @wkr.Module.listener()
     async def on_load(self, *_, **__):
-        await self.bot.db.templates.create_index([("name", pymongo.TEXT), ("description", pymongo.TEXT)])
-        await self.bot.db.templates.create_index([("approved", pymongo.ASCENDING)])
-        await self.bot.db.templates.create_index([("featured", pymongo.ASCENDING)])
-        await self.bot.db.templates.create_index([("uses", pymongo.ASCENDING)])
-        await self.bot.db.templates.create_index([("name", pymongo.ASCENDING)], unique=True)
+        pass
+        # Handled by the templates site
+        # await self.bot.db.templates.create_index([("name", pymongo.TEXT), ("description", pymongo.TEXT)])
+        # await self.bot.db.templates.create_index([("approved", pymongo.ASCENDING)])
+        # await self.bot.db.templates.create_index([("featured", pymongo.ASCENDING)])
+        # await self.bot.db.templates.create_index([("uses", pymongo.ASCENDING)])
+        # await self.bot.db.templates.create_index([("name", pymongo.ASCENDING)], unique=True)
 
     async def _crossload_template(self, template_id):
         template_id = template_id.strip("/").split("/")[-1]
@@ -66,8 +69,8 @@ class Templates(wkr.Module):
             return {
                 "name": data["name"],
                 "description": data["description"],
-                "creator": data["creator_id"],
-                "uses": data["usage_count"],
+                "creator_id": data["creator_id"],
+                "usage_count": data["usage_count"],
                 "approved": True,
                 "featured": False,
                 "data": {
@@ -136,7 +139,10 @@ class Templates(wkr.Module):
         Only roles: ```{b.prefix}template load starter !* roles```
         Everything but bans: ```{b.prefix}template load starter !bans```
         """
-        template = await ctx.client.db.templates.find_one({"name": name})
+        template = await ctx.client.mongo.dtpl.templates.find_one({
+            "internal": True,
+            "$or": [{"name": name}, {"_id": name}]
+        })
         if template is None:
             template = await self._crossload_template(name)
 
@@ -178,16 +184,6 @@ class Templates(wkr.Module):
         options.extend(["!settings", "!members"])
         await backup.load(**utils.backup_options(options))
 
-    @template.command(aliases=("del", "remove", "rm"))
-    @wkr.cooldown(5, 30)
-    async def delete(self, ctx, name):
-        result = await ctx.client.db.templates.delete_one({"name": name, "creator": ctx.author.id})
-        if result.deleted_count > 0:
-            raise ctx.f.SUCCESS("Successfully **deleted template**.")
-
-        else:
-            raise ctx.f.ERROR(f"There is **no template** with the name `{name}` **created by you**.")
-
     @template.command(aliases=("ls", "search", "s"))
     @wkr.cooldown(1, 10)
     async def list(self, ctx, *, search):
@@ -219,7 +215,10 @@ class Templates(wkr.Module):
 
         ```{b.prefix}template info starter```
         """
-        template = await ctx.client.db.templates.find_one({"name": name})
+        template = await ctx.client.mongo.dtpl.templates.find_one({
+            "internal": True,
+            "$or": [{"name": name}, {"_id": name}]
+        })
         if template is None:
             template = await self._crossload_template(name)
 
@@ -251,12 +250,12 @@ class Templates(wkr.Module):
             "fields": [
                 {
                     "name": "Creator",
-                    "value": f"<@{template['creator']}>",
+                    "value": f"<@{template['creator_id']}>",
                     "inline": True
                 },
                 {
                     "name": "Uses",
-                    "value": str(template["uses"]),
+                    "value": str(template["usage_count"]),
                     "inline": False
                 },
                 {
