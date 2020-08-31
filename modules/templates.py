@@ -37,7 +37,7 @@ class TemplateListMenu(wkr.ListMenu):
         items = []
         async for template in templates:
             items.append((
-                template["name"] + ("  🌟" if template["featured"] else ""),
+                template["name"],
                 template.get("description") or "No Description"
             ))
 
@@ -72,7 +72,6 @@ class Templates(wkr.Module):
                 "creator_id": data["creator_id"],
                 "usage_count": data["usage_count"],
                 "approved": True,
-                "featured": False,
                 "data": {
                     "id": 0,
                     "roles": [
@@ -242,10 +241,8 @@ class Templates(wkr.Module):
 
         return {
             "title": template["name"] + (
-                " 🌟" if template["featured"] else ""
-            ) + (
-                         "  ✅" if template["approved"] else " ❌"
-                     ),
+                "  ✅" if template["approved"] else " ❌"
+            ),
             "description": template["description"],
             "fields": [
                 {
