@@ -3,11 +3,9 @@ import utils
 import asyncio
 import pymongo
 import pymongo.errors
-from datetime import datetime
 from os import environ as env
 
-from backups import BackupSaver, BackupLoader
-import checks
+from backups import BackupLoader
 
 
 class TemplateListMenu(wkr.ListMenu):
@@ -38,7 +36,7 @@ class TemplateListMenu(wkr.ListMenu):
         items = []
         async for template in templates:
             items.append((
-                template["_id"] + ("  🌟" if template["featured"] else ""),
+                template["name"] + ("  🌟" if template["featured"] else ""),
                 template.get("description") or "No Description"
             ))
 
@@ -54,21 +52,11 @@ class Templates(wkr.Module):
 
     @wkr.Module.listener()
     async def on_load(self, *_, **__):
-        await self.bot.db.templates.create_index([("_id", pymongo.TEXT), ("description", pymongo.TEXT)])
-        await self.bot.db.backups.create_index([("approved", pymongo.ASCENDING)])
-        await self.bot.db.backups.create_index([("featured", pymongo.ASCENDING)])
-        await self.bot.db.backups.create_index([("uses", pymongo.ASCENDING)])
-        # Subscribe to message_reaction_add on the approval guild
-        # shard_id = await self.client.guild_shard(self.APPROVAL_GUILD)
-        # await self.bot.subscribe(f"{shard_id}.message_reaction_add", shared=True)
-        self.APPROVAL_OPTIONS = {
-            "✅": self._approve,
-            "⭐": self._feature,
-            "⛔": self._delete,
-            "❔": self._delete_because("Insufficient name and/or description, please fill them in and resubmit again."),
-            "🙅": self._delete_because("Not a template, just a copy of your server, use a backup instead. "
-                                       "Templates are for everyone, not specifically for you, they must be generic.")
-        }
+        await self.bot.db.templates.create_index([("name", pymongo.TEXT), ("description", pymongo.TEXT)])
+        await self.bot.db.templates.create_index([("approved", pymongo.ASCENDING)])
+        await self.bot.db.templates.create_index([("featured", pymongo.ASCENDING)])
+        await self.bot.db.templates.create_index([("uses", pymongo.ASCENDING)])
+        await self.bot.db.templates.create_index([("name", pymongo.ASCENDING)], unique=True)
 
     async def _crossload_template(self, template_id):
         template_id = template_id.strip("/").split("/")[-1]
@@ -76,7 +64,7 @@ class Templates(wkr.Module):
             data = await self.client.http.request(wkr.Route("GET", "/guilds/templates/" + template_id))
             guild = data["serialized_source_guild"]
             return {
-                "_id": data["name"],
+                "name": data["name"],
                 "description": data["description"],
                 "creator": data["creator_id"],
                 "uses": data["usage_count"],
@@ -120,44 +108,9 @@ class Templates(wkr.Module):
 
         ```{b.prefix}template create starter A basic template for new servers```
         """
-        raise ctx.f.ERROR("This command is disabled. Please use https://templates.xenon.bot to add new templates, you can find help on the [wiki](https://wiki.xenon.bot/en/templates#creating-a-template) for how to create new templates.")
-        if len(description) < 30:
-            raise ctx.f.ERROR("The template **description** must be at least **30 characters** long.")
-
-        name = name.lower().replace(" ", "-").replace("_", "-")
-        status_msg = await ctx.f_send("**Creating Template** ...", f=ctx.f.WORKING)
-
-        guild = await ctx.get_full_guild()
-        backup = BackupSaver(ctx.client, guild)
-        await backup.save()
-
-        template = {
-            "_id": name,
-            "description": description,
-            "creator": ctx.author.id,
-            "timestamp": datetime.utcnow(),
-            "uses": 0,
-            "approved": False,
-            "featured": False,
-            "data": backup.data
-        }
-
-        try:
-            await ctx.bot.db.templates.insert_one(template)
-        except pymongo.errors.DuplicateKeyError:
-            await ctx.client.edit_message(status_msg, **ctx.f.format(
-                f"There is **already a template** with the **name `{name}`**.",
-                f=ctx.f.ERROR
-            ))
-            return
-
-        await ctx.client.edit_message(status_msg, **ctx.f.format(
-            f"Successfully **created template** with the name `{name}`.\n"
-            f"The template will **not appear in the template list until it was approved** by a moderator.",
-            f=ctx.f.SUCCESS
-        ))
-
-        await self._send_to_approval(template)
+        raise ctx.f.ERROR("This command is disabled. Please use https://templates.xenon.bot to add new templates, "
+                          "you can find help on the [wiki](https://wiki.xenon.bot/en/templates#creating-a-template) "
+                          "for how to create new templates.")
 
     @template.command(aliases=("l",))
     @wkr.guild_only
@@ -167,7 +120,7 @@ class Templates(wkr.Module):
     async def load(self, ctx, name, *options):
         """
         Load a template
-        
+
         You can find more help on the [wiki](https://wiki.xenon.bot/templates#loading-a-template).
 
 
@@ -183,7 +136,7 @@ class Templates(wkr.Module):
         Only roles: ```{b.prefix}template load starter !* roles```
         Everything but bans: ```{b.prefix}template load starter !bans```
         """
-        template = await ctx.client.db.templates.find_one({"_id": name})
+        template = await ctx.client.db.templates.find_one({"name": name})
         if template is None:
             template = await self._crossload_template(name)
 
@@ -194,7 +147,8 @@ class Templates(wkr.Module):
                                        f"Please put the managed role called `{ctx.bot.user.name}` above all other "
                                        f"roles before clicking the ✅ reaction.\n\n"
                                        "__**All channels and roles will get replaced!**__\n\n"
-                                       "*Also keep in mind that you can only load up to 250 roles per day.*", f=ctx.f.WARNING)
+                                       "*Also keep in mind that you can only load up to 250 roles per day.*",
+                                       f=ctx.f.WARNING)
 
         reactions = ("✅", "❌")
         for reaction in reactions:
@@ -221,13 +175,13 @@ class Templates(wkr.Module):
         backup = BackupLoader(ctx.client, guild, template["data"], reason="Template loaded by " + str(ctx.author))
 
         options = list(options)
-        options.append("!settings")
-        await backup.load(**utils.backup_options(options))
+        options.extend(["!settings", "!members"])
+        await backup.load(0, **utils.backup_options(options))
 
     @template.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)
     async def delete(self, ctx, name):
-        result = await ctx.client.db.templates.delete_one({"_id": name, "creator": ctx.author.id})
+        result = await ctx.client.db.templates.delete_one({"name": name, "creator": ctx.author.id})
         if result.deleted_count > 0:
             raise ctx.f.SUCCESS("Successfully **deleted template**.")
 
@@ -265,7 +219,7 @@ class Templates(wkr.Module):
 
         ```{b.prefix}template info starter```
         """
-        template = await ctx.client.db.templates.find_one({"_id": name})
+        template = await ctx.client.db.templates.find_one({"name": name})
         if template is None:
             template = await self._crossload_template(name)
 
@@ -288,7 +242,7 @@ class Templates(wkr.Module):
             roles = roles[:1000] + "\n...\n```"
 
         return {
-            "title": template["_id"] + (
+            "title": template["name"] + (
                 " 🌟" if template["featured"] else ""
             ) + (
                          "  ✅" if template["approved"] else " ❌"
@@ -317,124 +271,3 @@ class Templates(wkr.Module):
                 }
             ]
         }
-
-    @template.command(hidden=True)
-    @checks.is_staff(level=checks.StaffLevel.MOD)
-    async def approve(self, ctx, tpl_name):
-        template = await self.client.db.templates.find_one({"_id": tpl_name})
-        if template is None:
-            raise ctx.f.ERROR(f"There is **no template** with the name `{tpl_name}`.")
-
-        await self.approve(template)
-        raise ctx.f.SUCCESS("Successfully **approved template**.")
-
-    @template.command(hidden=True)
-    @checks.is_staff(level=checks.StaffLevel.MOD)
-    async def feature(self, ctx, tpl_name):
-        template = await self.client.db.templates.find_one({"_id": tpl_name})
-        if template is None:
-            raise ctx.f.ERROR(f"There is **no template** with the name `{tpl_name}`.")
-
-        await self._feature(template)
-        raise ctx.f.SUCCESS("Successfully **featured template**.")
-
-    @template.command(hidden=True)
-    @checks.is_staff(level=checks.StaffLevel.MOD)
-    async def deny(self, ctx, tpl_name, *, reason):
-        template = await self.client.db.templates.find_one({"_id": tpl_name})
-        if template is None:
-            raise ctx.f.ERROR(f"There is **no template** with the name `{tpl_name}`.")
-
-        await self._delete_because(reason)(template)
-        raise ctx.f.SUCCESS("Successfully **denied / deleted template**.")
-
-    async def _send_to_approval(self, template):
-        msg = await self.client.f_send(
-            wkr.Snowflake(self.APPROVAL_CHANNEL),
-            embed=self._template_info(template)
-        )
-        for option in self.APPROVAL_OPTIONS.keys():
-            await self.client.add_reaction(msg, option)
-
-    @wkr.Module.listener()
-    async def on_message_reaction_add(self, shard_id, data):
-        if data["channel_id"] != self.APPROVAL_CHANNEL or data["user_id"] == self.bot.user.id:
-            return
-
-        action = self.APPROVAL_OPTIONS.get(data["emoji"]["name"])
-        if action is None:
-            return
-
-        try:
-            msg = await self.client.fetch_message(wkr.Snowflake(data["channel_id"]), data["message_id"])
-        except wkr.NotFound:
-            return
-
-        if len(msg.embeds) == 0:
-            return
-
-        tpl_name = msg.embeds[0].get("title", "").strip(" ✅❌")
-        if tpl_name == "":
-            return
-
-        template = await self.client.db.templates.find_one({"_id": tpl_name})
-        if template is not None:
-            await action(template)
-
-        await self.client.delete_message(msg)
-
-    def _delete_because(self, reason):
-        async def predicate(template):
-            await self.client.db.templates.delete_one({"_id": template["_id"]})
-            dm_channel = await self.client.start_dm(wkr.Snowflake(template["creator"]))
-            await self.client.f_send(
-                dm_channel,
-                f"Your **template `{template['_id']}` got denied**.```\n{reason}\n```",
-                f=self.client.f.INFO
-            )
-
-        return predicate
-
-    async def _delete(self, template):
-        shard_id = await self.client.guild_shard(self.APPROVAL_GUILD)
-        try:
-            data, = await self.client.wait_for(
-                event="message_create",
-                shard_id=shard_id,
-                check=lambda d: d["channel_id"] == self.APPROVAL_CHANNEL,
-                timeout=60
-            )
-        except asyncio.TimeoutError:
-            pass
-        else:
-            msg = wkr.Message(data)
-            await self.client.delete_message(msg)
-            await self._delete_because(msg.content)(template)
-
-    async def _feature(self, template):
-        await self.client.db.templates.update_one({"_id": template["_id"]}, {"$set": {
-            "approved": True,
-            "featured": True
-        }})
-        template["approved"] = True
-        template["featured"] = True
-        dm_channel = await self.client.start_dm(wkr.Snowflake(template["creator"]))
-        await self.client.f_send(
-            dm_channel,
-            f"Your **template `{template['_id']}` got featured**.",
-            f=self.client.f.INFO
-        )
-        await self.client.f_send(wkr.Snowflake(self.FEATURED_CHANNEL), embed=self._template_info(template))
-
-    async def _approve(self, template):
-        await self.client.db.templates.update_one({"_id": template["_id"]}, {"$set": {
-            "approved": True
-        }})
-        template["approved"] = True
-        dm_channel = await self.client.start_dm(wkr.Snowflake(template["creator"]))
-        await self.client.f_send(
-            dm_channel,
-            f"Your **template `{template['_id']}` got approved**.",
-            f=self.client.f.INFO
-        )
-        await self.client.f_send(wkr.Snowflake(self.LIST_CHANNEL), embed=self._template_info(template))
