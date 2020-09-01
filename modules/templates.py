@@ -138,10 +138,10 @@ class Templates(wkr.Module):
         Only roles: ```{b.prefix}template load starter !* roles```
         Everything but bans: ```{b.prefix}template load starter !bans```
         """
-        template = await ctx.client.mongo.dtpl.templates.find_one({
+        template = await ctx.client.mongo.dtpl.templates.find_one_and_update({
             "internal": True,
             "$or": [{"name": name}, {"_id": name}]
-        })
+        }, {"$inc": {"usage_count": 1}})
         if template is None:
             template = await self._crossload_template(name)
 
