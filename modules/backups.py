@@ -176,7 +176,7 @@ class Backups(wkr.Module):
                                        f"Please put the managed role called `{ctx.bot.user.name}` above all other "
                                        f"roles before clicking the ✅ reaction.\n\n"
                                        "__**All channels and roles will get replaced!**__\n\n"
-                                       "*Also keep in mind that you can only load up to 250 roles per day.*",
+                                       "*Also keep in mind that you can only load up to 250 roles per 48 hours.*",
                                        f=ctx.f.WARNING)
         reactions = ("✅", "❌")
         for reaction in reactions:
