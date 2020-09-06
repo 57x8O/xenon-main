@@ -54,7 +54,7 @@ class Copy(wkr.Module):
                                        f"Please put the managed role called `{ctx.bot.user.name}` above all other "
                                        f"roles before clicking the ✅ reaction.\n\n"
                                        "__**All channels and roles will get replaced!**__\n\n"
-                                       "*Also keep in mind that you can only copy up to 250 roles per day.*", f=ctx.f.WARNING)
+                                       "*Also keep in mind that you can only copy up to 250 roles per 48 hours.*", f=ctx.f.WARNING)
         reactions = ("✅", "❌")
         for reaction in reactions:
             await ctx.client.add_reaction(warning_msg, reaction)
