@@ -131,7 +131,7 @@ class BackupLoader:
                 )
             except asyncio.TimeoutError:
                 raise self.client.f.ERROR("Seems like you **hit** the `250 per 48 hours` **role creation limit** of "
-                                          "discord.\nYou have to **wait for 24 hours** until you can load another "
+                                          "discord.\nYou have to **wait for 48 hours** until you can load another "
                                           "backup or template.\n\n"
                                           "*This is a discord limitation and there is no way around it.*")
 
