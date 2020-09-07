@@ -545,7 +545,8 @@ class Backups(wkr.Module):
         async for interval in to_backup:
             self.bot.schedule(_run_interval_backup(interval))
             await self.bot.db.intervals.update_one({"_id": interval["_id"]}, {"$set": {
-                "next": interval["next"] + timedelta(hours=interval["interval"])
+                "next": interval["next"] + timedelta(hours=interval["interval"]),
+                "last": datetime.utcnow()
             }})
 
     @backup.command(aliases=("invites", "inv"))
