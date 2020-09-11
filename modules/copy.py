@@ -99,11 +99,16 @@ class Copy(wkr.Module):
                 "target_id": ctx.guild_id,
                 "source_id": loader.data["id"],
             },
-            {"$set": {
-                "target_id": ctx.guild_id,
-                "source_id": loader.data["id"],
-                **unpacked_ids
-            }},
+            {
+                "$set": {
+                    "target_id": ctx.guild_id,
+                    "source_id": backup.data["id"],
+                    **unpacked_ids
+                },
+                "$addToSet": {
+                    "loaders": ctx.author.id
+                }
+            },
             upsert=True
         )
 
