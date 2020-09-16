@@ -181,7 +181,7 @@ class Templates(wkr.Module):
 
         options = list(options)
         options.extend(["!settings", "!members"])
-        await backup.load(**utils.backup_options(options))
+        await backup.load(0, **utils.backup_options(options))
 
     @template.command(aliases=("ls", "search", "s"))
     @wkr.cooldown(1, 10)
