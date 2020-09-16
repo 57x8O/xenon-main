@@ -1,6 +1,7 @@
 import traceback
 import xenon_worker as wkr
 import asyncio
+import msgpack
 
 
 class Options:
@@ -250,13 +251,22 @@ class BackupLoader:
                                       "You can't start more than one at the same time.\n"
                                       "You have to **wait until it's done**.")
 
+        await self.client.redis.publish("loaders:start", self.guild.id)
         task = self.client.schedule(self._load(**options))
+        last_status = None
         while not task.done():
             await self.client.redis.setex(redis_key, 10, self.status)
+            if last_status != self.status:
+                await self.client.redis.publish(
+                    "loaders:status",
+                    msgpack.packb({"id": self.guild.id, "status": self.status})
+                )
+
             await asyncio.sleep(5)
             if not await self.client.redis.exists(redis_key):
                 # The loading key got deleted, probably manual cancellation
                 task.cancel()
                 raise self.client.f.ERROR("The **loading process was cancelled**. Did you cancel it manually?")
 
+        await self.client.redis.publish("loaders:done", self.guild.id)
         return task.result()
