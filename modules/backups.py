@@ -238,17 +238,36 @@ class Backups(wkr.Module):
 
     @backup.command(aliases=("clear",))
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
-    async def purge(self, ctx):
+    async def purge(self, ctx, before=None):
         """
         Delete all your backups
         __**This cannot be undone**__
+
+
+        __Arguments__
+
+        **limit**: Either the number of backups to delete (starting with the oldest) or a date (YYYY-MM-DD)
+        Using a date will delete all backups created __before__ the date.
 
 
         __Examples__
 
         ```{b.prefix}backup purge```
         """
-        warning_msg = await ctx.f_send("Are you sure that you want to delete all your backups?\n"
+        filter = {"creator": ctx.author.id}
+        if before is not None:
+            try:
+                filter["timestamp"] = {
+                    "$lte": datetime.strptime(
+                        before.replace(":", "").replace("-", "").replace("/", ""),
+                        "%Y%m%d"
+                    )
+                }
+            except ValueError:
+                raise ctx.f.ERROR(f"The value `{before}` is **not a valid date**. "
+                                  f"Please format it like `YYYY-MM-DD`, including padding zeroes.")
+
+        warning_msg = await ctx.f_send("Are you sure that you want to delete all (or some) of your backups?\n"
                                        "__**This cannot be undone!**__", f=ctx.f.WARNING)
         reactions = ("✅", "❌")
         for reaction in reactions:
@@ -271,7 +290,7 @@ class Backups(wkr.Module):
         if data["emoji"]["name"] != "✅":
             return
 
-        await ctx.client.db.backups.delete_many({"creator": ctx.author.id})
+        await ctx.client.db.backups.delete_many(filter)
         raise ctx.f.SUCCESS("Successfully **deleted all your backups**.")
 
     @backup.command(aliases=("ls",))
