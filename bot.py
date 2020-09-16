@@ -29,7 +29,3 @@ class Xenon(wkr.RabbitBot):
 
         else:
             await super().on_command_error(shard_id, cmd, ctx, e)
-
-    async def start(self, *args, **kwargs):
-        await super().start(*args, **kwargs)
-        await self.redis.select(1)
