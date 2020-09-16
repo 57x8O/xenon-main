@@ -5,6 +5,7 @@ import pymongo
 from pymongo import errors as mongoerrors
 from datetime import datetime, timedelta
 import random
+import msgpack
 
 import checks
 from backups import BackupSaver, BackupLoader
@@ -175,29 +176,44 @@ class Backups(wkr.Module):
 
         guild = await ctx.get_full_guild()
         backup = BackupLoader(ctx.client, guild, backup_d["data"], reason="Backup loaded by " + str(ctx.author))
-        await backup.load(**utils.backup_options(options))
 
-        unpacked_ids = {
-            f"ids.{s}": t
-            for s, t in backup.id_translator.items()
-        }
-        await ctx.bot.db.id_translators.update_one(
-            {
-                "target_id": ctx.guild_id,
-                "source_id": backup.data["id"],
-            },
-            {
-                "$set": {
+        await self.client.redis.publish("loaders:start", msgpack.packb({
+            "id": ctx.guild_id,
+            "type": "backup",
+            "source_id": backup.data["id"],
+            "backup_id": backup_id
+        }))
+        try:
+            await backup.load(**utils.backup_options(options))
+
+            unpacked_ids = {
+                f"ids.{s}": t
+                for s, t in backup.id_translator.items()
+            }
+            await ctx.bot.db.id_translators.update_one(
+                {
                     "target_id": ctx.guild_id,
                     "source_id": backup.data["id"],
-                    **unpacked_ids
                 },
-                "$addToSet": {
-                    "loaders": ctx.author.id
-                }
-            },
-            upsert=True
-        )
+                {
+                    "$set": {
+                        "target_id": ctx.guild_id,
+                        "source_id": backup.data["id"],
+                        **unpacked_ids
+                    },
+                    "$addToSet": {
+                        "loaders": ctx.author.id
+                    }
+                },
+                upsert=True
+            )
+        finally:
+            await self.client.redis.publish("loaders:done", msgpack.packb({
+                "id": ctx.guild_id,
+                "type": "backup",
+                "source_id": backup.data["id"],
+                "backup_id": backup_id
+            }))
 
     @backup.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)
