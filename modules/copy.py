@@ -1,5 +1,6 @@
 import xenon_worker as wkr
 import asyncio
+import msgpack
 
 import checks
 import utils
@@ -84,33 +85,46 @@ class Copy(wkr.Module):
 
         loader = BackupLoader(ctx.client, target_guild, backup.data, reason="Copied by " + str(ctx.author))
 
+        # Inject previous id translators if available
         translator = await ctx.bot.db.id_translators.find_one({"target_id": ctx.guild_id, "source_id": loader.data["id"]})
         if translator is not None:
             loader.id_translator.update(translator["ids"])
 
-        await loader.load(chatlog, **utils.backup_options(options))
+        await self.client.redis.publish("loaders:start", msgpack.packb({
+            "id": ctx.guild_id,
+            "type": "backup",
+            "source_id": backup.data["id"]
+        }))
+        try:
+            await loader.load(chatlog, **utils.backup_options(options))
 
-        unpacked_ids = {
-            f"ids.{s}": t
-            for s, t in loader.id_translator.items()
-        }
-        await ctx.bot.db.id_translators.update_one(
-            {
-                "target_id": ctx.guild_id,
-                "source_id": loader.data["id"],
-            },
-            {
-                "$set": {
+            unpacked_ids = {
+                f"ids.{s}": t
+                for s, t in loader.id_translator.items()
+            }
+            await ctx.bot.db.id_translators.update_one(
+                {
                     "target_id": ctx.guild_id,
-                    "source_id": backup.data["id"],
-                    **unpacked_ids
+                    "source_id": loader.data["id"],
                 },
-                "$addToSet": {
-                    "loaders": ctx.author.id
-                }
-            },
-            upsert=True
-        )
+                {
+                    "$set": {
+                        "target_id": ctx.guild_id,
+                        "source_id": backup.data["id"],
+                        **unpacked_ids
+                    },
+                    "$addToSet": {
+                        "loaders": ctx.author.id
+                    }
+                },
+                upsert=True
+            )
+        finally:
+            await self.client.redis.publish("loaders:done", msgpack.packb({
+                "id": ctx.guild_id,
+                "type": "backup",
+                "source_id": backup.data["id"]
+            }))
 
     @copy.command(aliases=('msg',))
     @wkr.guild_only

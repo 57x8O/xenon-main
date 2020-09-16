@@ -4,6 +4,7 @@ import asyncio
 import pymongo
 import pymongo.errors
 from os import environ as env
+import msgpack
 
 from backups import BackupLoader
 
@@ -73,7 +74,7 @@ class Templates(wkr.Module):
                 "usage_count": data["usage_count"],
                 "approved": True,
                 "data": {
-                    "id": 0,
+                    "id": "0",
                     "roles": [
                         {
                             "position": pos,
@@ -181,7 +182,43 @@ class Templates(wkr.Module):
 
         options = list(options)
         options.extend(["!settings", "!members"])
-        await backup.load(0, **utils.backup_options(options))
+        await self.client.redis.publish("loaders:start", msgpack.packb({
+            "id": ctx.guild_id,
+            "type": "template",
+            "source_id": backup.data["id"],
+            "template_id": name.strip("/").split("/")[-1]
+        }))
+        try:
+            await backup.load(0, **utils.backup_options(options))
+
+            unpacked_ids = {
+                f"ids.{s}": t
+                for s, t in backup.id_translator.items()
+            }
+            await ctx.bot.db.id_translators.update_one(
+                {
+                    "target_id": ctx.guild_id,
+                    "source_id": backup.data["id"],
+                },
+                {
+                    "$set": {
+                        "target_id": ctx.guild_id,
+                        "source_id": backup.data["id"],
+                        **unpacked_ids
+                    },
+                    "$addToSet": {
+                        "loaders": ctx.author.id
+                    }
+                },
+                upsert=True
+            )
+        finally:
+            await self.client.redis.publish("loaders:done", msgpack.packb({
+                "id": ctx.guild_id,
+                "type": "template",
+                "source_id": backup.data["id"],
+                "template_id": name.strip("/").split("/")[-1]
+            }))
 
     @template.command(aliases=("ls", "search", "s"))
     @wkr.cooldown(1, 10)

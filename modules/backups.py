@@ -8,6 +8,7 @@ import random
 import checks
 from motor.motor_asyncio import AsyncIOMotorGridFSBucket
 import json
+import msgpack
 
 import checks
 from backups import BackupSaver, BackupLoader
@@ -207,29 +208,43 @@ class Backups(wkr.Module):
         if translator is not None:
             backup.id_translator.update(translator["ids"])
 
-        await backup.load(chatlog, **utils.backup_options(options))
+        await self.client.redis.publish("loaders:start", msgpack.packb({
+            "id": ctx.guild_id,
+            "type": "backup",
+            "source_id": backup.data["id"],
+            "backup_id": backup_id
+        }))
+        try:
+            await backup.load(chatlog, **utils.backup_options(options))
 
-        unpacked_ids = {
-            f"ids.{s}": t
-            for s, t in backup.id_translator.items()
-        }
-        await ctx.bot.db.id_translators.update_one(
-            {
-                "target_id": ctx.guild_id,
-                "source_id": backup.data["id"],
-            },
-            {
-                "$set": {
+            unpacked_ids = {
+                f"ids.{s}": t
+                for s, t in backup.id_translator.items()
+            }
+            await ctx.bot.db.id_translators.update_one(
+                {
                     "target_id": ctx.guild_id,
                     "source_id": backup.data["id"],
-                    **unpacked_ids
                 },
-                "$addToSet": {
-                    "loaders": ctx.author.id
-                }
-            },
-            upsert=True
-        )
+                {
+                    "$set": {
+                        "target_id": ctx.guild_id,
+                        "source_id": backup.data["id"],
+                        **unpacked_ids
+                    },
+                    "$addToSet": {
+                        "loaders": ctx.author.id
+                    }
+                },
+                upsert=True
+            )
+        finally:
+            await self.client.redis.publish("loaders:done", msgpack.packb({
+                "id": ctx.guild_id,
+                "type": "backup",
+                "source_id": backup.data["id"],
+                "backup_id": backup_id
+            }))
 
         if backup.invite is not None:
             await ctx.bot.db.backups.update_one({"_id": backup_id}, {"$set": {"invite": backup.invite["code"]}})

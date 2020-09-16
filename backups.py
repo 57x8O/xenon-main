@@ -409,7 +409,6 @@ class BackupLoader:
                                       "You can't start more than one at the same time.\n"
                                       "You have to **wait until it's done**.")
 
-        await self.client.redis.publish("loaders:start", self.guild.id)
         task = self.client.schedule(self._load(chatlog, **options))
         last_status = None
         while not task.done():
@@ -426,5 +425,4 @@ class BackupLoader:
                 task.cancel()
                 raise self.client.f.ERROR("The **loading process was cancelled**. Did you cancel it manually?")
 
-        await self.client.redis.publish("loaders:done", self.guild.id)
         return task.result()
