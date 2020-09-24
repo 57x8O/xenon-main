@@ -74,7 +74,7 @@ class Templates(wkr.Module):
                 "usage_count": data["usage_count"],
                 "approved": True,
                 "data": {
-                    "id": "0",
+                    "id": 0,
                     "roles": [
                         {
                             "position": pos,
@@ -185,7 +185,7 @@ class Templates(wkr.Module):
         await self.client.redis.publish("loaders:start", msgpack.packb({
             "id": ctx.guild_id,
             "type": "template",
-            "source_id": backup.data["id"],
+            "source_id": str(backup.data["id"]),
             "template_id": name.strip("/").split("/")[-1]
         }))
         try:
@@ -216,7 +216,7 @@ class Templates(wkr.Module):
             await self.client.redis.publish("loaders:done", msgpack.packb({
                 "id": ctx.guild_id,
                 "type": "template",
-                "source_id": backup.data["id"],
+                "source_id": str(backup.data["id"]),
                 "template_id": name.strip("/").split("/")[-1]
             }))
 
