@@ -113,7 +113,8 @@ class BackupLoader:
             role.pop("managed", None)
 
             # Default role (@everyone)
-            if role["id"] == self.data["id"]:
+            # role["id"] == 0 is an edge case of cross-loaded templates
+            if role["id"] == self.data["id"] or role["id"] == 0:
                 to_edit = self.guild.default_role
                 if to_edit is not None:
                     try:
