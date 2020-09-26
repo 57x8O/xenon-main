@@ -74,7 +74,7 @@ class Templates(wkr.Module):
                 "usage_count": data["usage_count"],
                 "approved": True,
                 "data": {
-                    "id": 0,
+                    "id": int(data["source_guild_id"]),
                     "roles": [
                         {
                             "position": pos,
