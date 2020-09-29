@@ -55,9 +55,9 @@ class Backups(wkr.Module):
         )
         self.grid_fs = AsyncIOMotorGridFSBucket(self.bot.db, "backup_blobs", chunk_size_bytes=8000000)
 
-    @wkr.Module.task(hours=24)
+    @wkr.Module.task(hours=1)
     async def message_retention(self):
-        await self.bot.db.update_many(
+        await self.bot.db.backups.update_many(
             {
                 "msg_retention": True,
                 "timestamp": {
@@ -65,7 +65,7 @@ class Backups(wkr.Module):
                 }
             },
             {
-                "$unset": "data.messages"
+                "$unset": {"data.messages": ""}
             }
         )
 
