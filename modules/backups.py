@@ -47,6 +47,8 @@ class Backups(wkr.Module):
         await self.bot.db.backups.create_index([("data.id", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("msg_retention", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("const_invite", pymongo.ASCENDING)])
+        await self.bot.db.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
+        await self.bot.db.intervals.create_index([("next", pymongo.ASCENDING)])
         await self.bot.db.id_translators.create_index(
             [("source_id", pymongo.ASCENDING), ("target_id", pymongo.ASCENDING)],
             unique=True
