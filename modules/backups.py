@@ -47,14 +47,13 @@ class Backups(wkr.Module):
         await self.bot.db.backups.create_index([("data.id", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("msg_retention", pymongo.ASCENDING)])
         await self.bot.db.backups.create_index([("const_invite", pymongo.ASCENDING)])
-        await self.bot.db.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
-        await self.bot.db.intervals.create_index([("next", pymongo.ASCENDING)])
+        await self.bot.db.premium.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
+        await self.bot.db.premium.intervals.create_index([("next", pymongo.ASCENDING)])
         await self.bot.db.id_translators.create_index(
             [("source_id", pymongo.ASCENDING), ("target_id", pymongo.ASCENDING)],
             unique=True
         )
         self.grid_fs = AsyncIOMotorGridFSBucket(self.bot.db, "backup_blobs", chunk_size_bytes=8000000)
-        await self.bot.db.intervals.create_index([("guild", pymongo.ASCENDING), ("user", pymongo.ASCENDING)])
 
     @wkr.Module.task(hours=24)
     async def message_retention(self):
@@ -424,7 +423,7 @@ class Backups(wkr.Module):
             await ctx.invoke("backup interval on " + " ".join(interval))
             return
 
-        interval = await ctx.bot.db.intervals.find_one({"guild": ctx.guild_id, "user": ctx.author.id})
+        interval = await ctx.bot.db.premium.intervals.find_one({"guild": ctx.guild_id, "user": ctx.author.id})
         if interval is None:
             raise ctx.f.INFO("The **backup interval is** currently turned **off**.\n"
                              f"Turn it on with `{ctx.bot.prefix}backup interval on 24h`.")
@@ -527,7 +526,7 @@ class Backups(wkr.Module):
 
         now = datetime.utcnow()
         td = timedelta(hours=hours)
-        await ctx.bot.db.intervals.update_one({"guild": ctx.guild_id, "user": ctx.author.id}, {"$set": {
+        await ctx.bot.db.premium.intervals.update_one({"guild": ctx.guild_id, "user": ctx.author.id}, {"$set": {
             "guild": ctx.guild_id,
             "user": ctx.author.id,
             "last": now,
@@ -553,7 +552,7 @@ class Backups(wkr.Module):
 
         ```{b.prefix}backup interval off```
         """
-        result = await ctx.bot.db.intervals.delete_one({"guild": ctx.guild_id, "user": ctx.author.id})
+        result = await ctx.bot.db.premium.intervals.delete_one({"guild": ctx.guild_id, "user": ctx.author.id})
         if result.deleted_count > 0:
             raise ctx.f.SUCCESS("Successfully **disabled the backup interval**.")
 
@@ -582,10 +581,10 @@ class Backups(wkr.Module):
 
             await self._store_backup(interval["user"], utils.unique_id(), backup.data, interval=True)
 
-        to_backup = self.bot.db.intervals.find({"next": {"$lt": datetime.utcnow()}})
+        to_backup = self.bot.db.premium.intervals.find({"next": {"$lt": datetime.utcnow()}})
         async for interval in to_backup:
             self.bot.schedule(_run_interval_backup(interval))
-            await self.bot.db.intervals.update_one({"_id": interval["_id"]}, {"$set": {
+            await self.bot.db.premium.intervals.update_one({"_id": interval["_id"]}, {"$set": {
                 "next": interval["next"] + timedelta(hours=interval["interval"]),
                 "last": datetime.utcnow()
             }})
