@@ -1,6 +1,7 @@
 import random
 from datetime import datetime, timedelta
 import xenon_worker as wkr
+from enum import IntEnum
 
 
 base36 = '0123456789abcdefghijklmnopqrstuvwxyz'
@@ -127,3 +128,17 @@ def backup_options(options):
             parsed_options[option] = True
 
     return parsed_options
+
+
+class AuditLogType(IntEnum):
+    BACKUP_CREATE = 0
+    BACKUP_LOAD = 1
+    BACKUP_INTERVAL_ENABLE = 2
+    BACKUP_INTERVAL_DISABLE = 3
+    TEMPLATE_LOAD = 4
+    COPY = 5
+    CHATLOG_CREATE = 6
+    CHATLOG_LOAD = 7
+    MESSAGE_SYNC_CREATE = 8
+    BAN_SYNC_CREATE = 9
+    SYNC_DELETE = 10

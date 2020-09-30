@@ -1,5 +1,4 @@
 import xenon_worker as wkr
-import utils
 import asyncio
 import pymongo
 from pymongo import errors as mongoerrors
@@ -7,6 +6,7 @@ from datetime import datetime, timedelta
 import random
 import msgpack
 
+import utils
 import checks
 from backups import BackupSaver, BackupLoader
 
@@ -119,6 +119,7 @@ class Backups(wkr.Module):
                      f"```{ctx.bot.prefix}backup info {backup_id}```"
         })
         await ctx.client.edit_message(status_msg, embed=embed)
+        await ctx.bot.create_audit_log(utils.AuditLogType.BACKUP_CREATE, [ctx.guild_id], ctx.author.id)
 
     @backup.command(aliases=("l",))
     @wkr.guild_only
@@ -215,6 +216,7 @@ class Backups(wkr.Module):
                 "source_id": backup.data["id"],
                 "backup_id": backup_id
             }))
+            await ctx.bot.create_audit_log(utils.AuditLogType.BACKUP_LOAD, [ctx.guild_id], ctx.author.id)
 
     @backup.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)
@@ -464,6 +466,7 @@ class Backups(wkr.Module):
             "interval": hours
         }}, upsert=True)
 
+        await ctx.bot.create_audit_log(utils.AuditLogType.BACKUP_INTERVAL_ENABLE, [ctx.guild_id], ctx.author.id)
         raise ctx.f.SUCCESS("Successful **enabled the backup interval**.\nThe first backup will be created in "
                             f"`{utils.timedelta_to_string(td)}` "
                             f"at `{utils.datetime_to_string(datetime.utcnow() + td)} UTC`.")
@@ -481,6 +484,7 @@ class Backups(wkr.Module):
         """
         result = await ctx.bot.db.intervals.delete_one({"guild": ctx.guild_id, "user": ctx.author.id})
         if result.deleted_count > 0:
+            await ctx.bot.create_audit_log(utils.AuditLogType.BACKUP_INTERVAL_DISABLE, [ctx.guild_id], ctx.author.id)
             raise ctx.f.SUCCESS("Successfully **disabled the backup interval**.")
 
         else:

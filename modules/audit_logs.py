@@ -1,25 +1,15 @@
 import xenon_worker as wkr
-from enum import IntEnum
 import pymongo
 
 import utils
-
-
-class AuditLogType(IntEnum):
-    BACKUP_CREATE = 0
-    BACKUP_LOAD = 1
-    TEMPLATE_LOAD = 2
-    COPY = 3
-    CHATLOG_CREATE = 4
-    CHATLOG_LOAD = 5
-    MESSAGE_SYNC_CREATE = 6
-    BAN_SYNC_CREATE = 7
-    SYNC_DELETE = 8
+from utils import AuditLogType
 
 
 text_formats = {
     AuditLogType.BACKUP_CREATE: "<@{user}> created a backup of this server",
     AuditLogType.BACKUP_LOAD: "<@{user}> loaded a backup on this server",
+    AuditLogType.BACKUP_INTERVAL_ENABLE: "<@{user}> enabled their backup interval for this server",
+    AuditLogType.BACKUP_INTERVAL_DISABLE: "<@{user}> disabled their backup interval for this server",
     AuditLogType.TEMPLATE_LOAD: "<@{user}> loaded a template on this server",
     AuditLogType.COPY: "<@{user}> copied the server with the id `{source}` to the server with the id `{target}`",
     AuditLogType.CHATLOG_CREATE: "<@{user}> created a chatlog of the channel <#{channel}>",

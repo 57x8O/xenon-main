@@ -219,6 +219,7 @@ class Templates(wkr.Module):
                 "source_id": str(backup.data["id"]),
                 "template_id": name.strip("/").split("/")[-1]
             }))
+            await ctx.bot.create_audit_log(utils.AuditLogType.TEMPLATE_LOAD, [ctx.guild_id], ctx.author.id)
 
     @template.command(aliases=("ls", "search", "s"))
     @wkr.cooldown(1, 10)
