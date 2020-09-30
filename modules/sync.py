@@ -38,13 +38,15 @@ class SyncListMenu(wkr.ListMenu):
             if sync["type"] == SyncType.MESSAGES:
                 items.append((
                     sync["_id"],
-                    f"Messages from <#{sync['source']}> to <#{sync['target']}>"
+                    f"Messages from <#{sync['source']}> to <#{sync['target']}>\n"
+                    f"(`{sync.get('uses', 0)}` message(s) transferred)"
                 ))
 
             elif sync["type"] == SyncType.BANS:
                 items.append((
                     sync["_id"],
-                    f"Bans from {sync['source']} to {sync['target']}"
+                    f"Bans from `{sync['source']}` to `{sync['target']}`\n"
+                    f"(`{sync.get('uses', 0)}` ban(s) transferred)"
                 ))
 
         return items
@@ -64,6 +66,9 @@ class Sync(wkr.Module):
         await self.bot.subscribe("*.message_create", shared=True)
         await self.bot.subscribe("*.guild_ban_add", shared=True)
         await self.bot.subscribe("*.guild_ban_remove", shared=True)
+
+        await self.bot.subscribe("*.channel_delete", shared=True)
+        await self.bot.subscribe("*.guild_delete", shared=True)
 
     @wkr.Module.command()
     async def sync(self, ctx):
@@ -174,7 +179,8 @@ class Sync(wkr.Module):
                     "type": SyncType.MESSAGES,
                     "target": target_id,
                     "source": source_id,
-                    "webhook": webh.to_dict()
+                    "webhook": webh.to_dict(),
+                    "uses": 0
                 })
             except pymongo.errors.DuplicateKeyError:
                 await ctx.f_send(
@@ -229,6 +235,7 @@ class Sync(wkr.Module):
                     **msg.to_dict(),
                     allowed_mentions={"parse": []}
                 )
+                await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
             except wkr.NotFound:
                 await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
 
@@ -275,6 +282,7 @@ class Sync(wkr.Module):
                     "type": SyncType.BANS,
                     "target": target.id,
                     "source": source.id,
+                    "uses": 0
                 })
             except pymongo.errors.DuplicateKeyError:
                 await ctx.f_send(
@@ -320,6 +328,7 @@ class Sync(wkr.Module):
 
             try:
                 await self.bot.ban_user(wkr.Snowflake(sync["target"]), user, reason=ban["reason"])
+                await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
             except Exception:
                 traceback.print_exc()
 
@@ -330,5 +339,14 @@ class Sync(wkr.Module):
         async for sync in syncs:
             try:
                 await self.bot.unban_user(wkr.Snowflake(sync["target"]), user)
+                await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
             except Exception:
                 traceback.print_exc()
+
+    @wkr.Module.listener()
+    async def on_guild_delete(self, _, data):
+        await self.bot.db.premium.syncs.delete_many({"$or": [{"source": data["id"]}, {"target": data["id"]}]})
+
+    @wkr.Module.listener()
+    async def on_channel_delete(self, _, data):
+        await self.bot.db.premium.syncs.delete_many({"$or": [{"source": data["id"]}, {"target": data["id"]}]})
