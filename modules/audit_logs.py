@@ -37,9 +37,10 @@ class AuditLogList(wkr.ListMenu):
         logs = self.ctx.bot.db.audit_logs.find(**args)
         items = []
         async for audit_log in logs:
+            type = AuditLogType(audit_log["type"])
             items.append((
                 utils.datetime_to_string(audit_log["timestamp"]),
-                text_formats[AuditLogType(audit_log["type"])].format(**audit_log, **audit_log["extra"])
+                f"__{type.name.replace('_', ' ')}__: {text_formats[type].format(**audit_log, **audit_log['extra'])}"
             ))
 
         return items
