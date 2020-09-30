@@ -39,14 +39,14 @@ class SyncListMenu(wkr.ListMenu):
                 items.append((
                     sync["_id"],
                     f"Messages from <#{sync['source']}> to <#{sync['target']}>\n"
-                    f"(`{sync.get('uses', 0)}` messages transferred)"
+                    f"(`{sync.get('uses', 0)}` message(s) transferred)"
                 ))
 
             elif sync["type"] == SyncType.BANS:
                 items.append((
                     sync["_id"],
                     f"Bans from `{sync['source']}` to `{sync['target']}`\n"
-                    f"(`{sync.get('uses', 0)}` bans transferred)"
+                    f"(`{sync.get('uses', 0)}` ban(s) transferred)"
                 ))
 
         return items
