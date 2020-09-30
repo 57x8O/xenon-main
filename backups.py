@@ -65,33 +65,54 @@ class BackupSaver:
         ]
 
     async def _save_messages(self):
-        if self.chatlog <= 0:
-            return
-
         messages = self.data["messages"] = {}
+
+        def _serialize_msg(message):
+            return {
+                "id": message.id,
+                "content": message.content,
+                "author": message.author.user.to_dict(),
+                "attachments": [
+                    {
+                        "filename": attachment["filename"],
+                        "url": attachment["url"]
+                    }
+                    for attachment in message.attachments
+                ],
+                "pinned": message.pinned,
+                "embeds": message.embeds
+            }
 
         for channel in self.guild.channels:
             if channel.type == wkr.ChannelType.GUILD_VOICE or channel.type == wkr.ChannelType.GUILD_CATEGORY:
                 continue
 
+            if self.chatlog > 0:
+                try:
+                    messages[channel.id] = [
+                        _serialize_msg(message)
+                        async for message in self.client.iter_messages(channel, self.chatlog)
+                    ]
+                except wkr.DiscordException:
+                    pass
+
             try:
-                messages[channel.id] = [
-                    {
-                        "id": message.id,
-                        "content": message.content,
-                        "author": message.author.user.to_dict(),
-                        "attachments": [
-                            {
-                                "filename": attachment["filename"],
-                                "url": attachment["url"]
-                            }
-                            for attachment in message.attachments
-                        ],
-                        "pinned": message.pinned,
-                        "embeds": message.embeds
-                    }
-                    async for message in self.client.iter_messages(channel, self.chatlog)
-                ]
+                pins = sorted(await self.client.fetch_pins(channel), key=lambda m: int(m.id), reverse=True)
+                existing = messages.get(channel.id)
+                if existing is None:
+                    messages[channel.id] = [_serialize_msg(m) for m in pins]
+
+                else:
+                    # combine pins with normal chatlog without creating duplicates
+                    for pinned in pins:
+                        for i, message in enumerate(existing):
+                            if message["id"] == pinned.id:
+                                existing[i] = _serialize_msg(pinned)
+                                break
+
+                        else:
+                            existing.append(_serialize_msg(pinned))
+
             except wkr.DiscordException:
                 pass
 
