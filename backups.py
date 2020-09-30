@@ -334,8 +334,19 @@ class BackupLoader:
                 if new_id is None:
                     return
 
+                to_load = []
+                if self.options.get("pins"):
+                    cl = self.chatlog
+                    for message in messages:
+                        if cl > 0 or message["pinned"]:
+                            to_load.insert(0, message)
+                            cl -= 1
+
+                else:
+                    to_load = reversed(messages[:self.chatlog])
+
                 webhook = await self.client.create_webhook(wkr.Snowflake(new_id), name="backup")
-                for msg in reversed(messages[:self.chatlog]):
+                for msg in to_load:
                     author = wkr.User(msg["author"])
 
                     attachments = msg.get("attachments", [])
@@ -356,7 +367,7 @@ class BackupLoader:
                         continue
 
                     try:
-                        await self.client.execute_webhook(
+                        new_msg = await self.client.execute_webhook(
                             webhook,
                             wait=True,
                             username=author.name,
@@ -365,6 +376,8 @@ class BackupLoader:
                             files=files,
                             **msg
                         )
+                        if msg["pinned"]:
+                            await self.client.pin_message(new_msg)
                     except wkr.NotFound:
                         break
 
