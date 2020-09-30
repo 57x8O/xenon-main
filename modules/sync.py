@@ -67,6 +67,9 @@ class Sync(wkr.Module):
         await self.bot.subscribe("*.guild_ban_add", shared=True)
         await self.bot.subscribe("*.guild_ban_remove", shared=True)
 
+        await self.bot.subscribe("*.channel_delete", shared=True)
+        await self.bot.subscribe("*.guild_delete", shared=True)
+
     @wkr.Module.command()
     async def sync(self, ctx):
         """
@@ -339,3 +342,11 @@ class Sync(wkr.Module):
                 await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
             except Exception:
                 traceback.print_exc()
+
+    @wkr.Module.listener()
+    async def on_guild_delete(self, _, data):
+        await self.bot.db.premium.syncs.delete_many({"$or": [{"source": data["id"]}, {"target": data["id"]}]})
+
+    @wkr.Module.listener()
+    async def on_channel_delete(self, _, data):
+        await self.bot.db.premium.syncs.delete_many({"$or": [{"source": data["id"]}, {"target": data["id"]}]})
