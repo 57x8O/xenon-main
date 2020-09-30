@@ -39,7 +39,7 @@ class AuditLogList(wkr.ListMenu):
         async for audit_log in logs:
             items.append((
                 utils.datetime_to_string(audit_log["timestamp"]),
-                text_formats[AuditLogType(audit_log[type])].format(**audit_log, **audit_log["extra"])
+                text_formats[AuditLogType(audit_log["type"])].format(**audit_log, **audit_log["extra"])
             ))
 
         return items
@@ -52,11 +52,11 @@ class AuditLogs(wkr.Module):
         await self.bot.db.audit_logs.create_index([("user", pymongo.ASCENDING)])
         await self.bot.db.audit_logs.create_index([("guild", pymongo.ASCENDING)])
 
-    @wkr.Module.command(name="audit logs", aliases=("logs",))
+    @wkr.Module.command(aliases=("logs",))
     @wkr.guild_only
     @wkr.has_permissions(administrator=True)
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
-    async def audit_logs(self, ctx):
+    async def auditlogs(self, ctx):
         """
         Get a list of actions that were recently taken on this guild
         (backup create, backup load, template load, copy from, copy to,
