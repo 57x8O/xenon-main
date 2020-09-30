@@ -105,6 +105,10 @@ class Sync(wkr.Module):
         """
         result = await ctx.bot.db.premium.syncs.delete_one({"_id": sync_id, "guilds": ctx.guild_id})
         if result.deleted_count > 0:
+            await ctx.bot.create_audit_log(
+                utils.AuditLogType.SYNC_DELETE, [ctx.guild_id], ctx.author.id,
+                {"id": sync_id}
+            )
             raise ctx.f.SUCCESS("Successfully **deleted sync**.")
 
         else:
@@ -182,6 +186,10 @@ class Sync(wkr.Module):
                 await ctx.f_send(
                     f"Successfully **created sync** from <#{source_id}> to <#{target_id}> with the id `{sync_id}`",
                     f=ctx.f.SUCCESS
+                )
+                await ctx.bot.create_audit_log(
+                    utils.AuditLogType.MESSAGE_SYNC_CREATE, [ctx.guild_id, guild.id], ctx.author.id,
+                    {"source": source_id, "target": target_id, "id": sync_id}
                 )
 
         if direction == SyncDirection.FROM or direction == SyncDirection.BOTH:
@@ -280,6 +288,10 @@ class Sync(wkr.Module):
                     f"Successfully **created sync** from {source.name} to {target.name} with the id `{sync_id}`.\n"
                     f"The bot will now copy all existing bans.",
                     f=ctx.f.SUCCESS
+                )
+                await ctx.bot.create_audit_log(
+                    utils.AuditLogType.BAN_SYNC_CREATE, [ctx.guild_id, guild.id], ctx.author.id,
+                    {"source": source.id, "target": target.id, "id": sync_id}
                 )
 
             async def _copy_bans():

@@ -162,6 +162,9 @@ class Chatlog(wkr.Module):
                      f"```{ctx.bot.prefix}chatlog info {chatlog_id}```"
         })
         await ctx.client.edit_message(status_msg, embed=embed)
+        await ctx.bot.create_audit_log(
+            utils.AuditLogType.CHATLOG_CREATE, [ctx.guild_id], ctx.author.id, {"channel": ctx.channel_id}
+        )
 
     @chatlog.command(aliases=("l",))
     @wkr.guild_only
@@ -211,7 +214,12 @@ class Chatlog(wkr.Module):
         if data["emoji"]["name"] != "✅":
             return
 
-        await self._load_chatlog(chatlog_d["data"], ctx.channel_id, count)
+        try:
+            await self._load_chatlog(chatlog_d["data"], ctx.channel_id, count)
+        finally:
+            await ctx.bot.create_audit_log(
+                utils.AuditLogType.CHATLOG_LOAD, [ctx.guild_id], ctx.author.id, {"channel": ctx.channel_id}
+            )
 
     @chatlog.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)

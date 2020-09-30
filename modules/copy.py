@@ -125,6 +125,10 @@ class Copy(wkr.Module):
                 "type": "backup",
                 "source_id": backup.data["id"]
             }))
+            await ctx.bot.create_audit_log(
+                utils.AuditLogType.COPY, [ctx.guild_id, source_guild.id], ctx.author.id,
+                {"source": source_guild.id, "target": ctx.guild_id}
+            )
 
     @copy.command(aliases=('msg',))
     @wkr.guild_only
