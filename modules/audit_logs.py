@@ -51,7 +51,7 @@ class AuditLogs(wkr.Module):
     async def on_load(self, *_, **__):
         await self.bot.db.audit_logs.create_index([("timestamp", pymongo.ASCENDING)])
         await self.bot.db.audit_logs.create_index([("user", pymongo.ASCENDING)])
-        await self.bot.db.audit_logs.create_index([("guild", pymongo.ASCENDING)])
+        await self.bot.db.audit_logs.create_index([("guilds", pymongo.ASCENDING)])
 
     @wkr.Module.command(aliases=("logs",))
     @wkr.guild_only
