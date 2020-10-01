@@ -1,9 +1,9 @@
 import xenon_worker as wkr
 import pymongo
+from datetime import datetime, timedelta
 
 import utils
 from utils import AuditLogType
-
 
 text_formats = {
     AuditLogType.BACKUP_CREATE: "<@{user}> created a backup of this server",
@@ -52,6 +52,14 @@ class AuditLogs(wkr.Module):
         await self.bot.db.audit_logs.create_index([("timestamp", pymongo.ASCENDING)])
         await self.bot.db.audit_logs.create_index([("user", pymongo.ASCENDING)])
         await self.bot.db.audit_logs.create_index([("guilds", pymongo.ASCENDING)])
+
+    @wkr.Module.task(hours=1)
+    async def audit_log_retention(self):
+        await self.bot.db.audit_logs.delete_many({
+            "timestamp": {
+                "$lte": datetime.utcnow() - timedelta(days=365)
+            }
+        })
 
     @wkr.Module.command(aliases=("logs",))
     @wkr.guild_only
