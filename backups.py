@@ -338,9 +338,12 @@ class BackupLoader:
                 if self.options.get("pins"):
                     cl = self.chatlog
                     for message in messages:
-                        if cl > 0 or message["pinned"]:
+                        if cl > 0:
                             to_load.insert(0, message)
                             cl -= 1
+
+                        elif message["pinned"]:
+                            to_load.insert(0, message)
 
                 else:
                     to_load = reversed(messages[:self.chatlog])

@@ -108,10 +108,10 @@ class Sync(wkr.Module):
 
         ```{b.prefix}sync delete 3zpssue46g```
         """
-        result = await ctx.bot.db.premium.syncs.delete_one({"_id": sync_id, "guilds": ctx.guild_id})
-        if result.deleted_count > 0:
+        sync = await ctx.bot.db.premium.syncs.find_one_and_delete({"_id": sync_id, "guilds": ctx.guild_id})
+        if sync is not None:
             await ctx.bot.create_audit_log(
-                utils.AuditLogType.SYNC_DELETE, [ctx.guild_id], ctx.author.id,
+                utils.AuditLogType.SYNC_DELETE, sync["guilds"], ctx.author.id,
                 {"id": sync_id}
             )
             raise ctx.f.SUCCESS("Successfully **deleted sync**.")
