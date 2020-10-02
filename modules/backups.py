@@ -139,7 +139,7 @@ class Backups(wkr.Module):
         embed = ctx.f.format(f"Successfully **created backup** with the id `{backup_id}`.", f=ctx.f.SUCCESS)["embed"]
         embed.setdefault("fields", []).append({
             "name": "Usage",
-            "value": f"```{ctx.bot.prefix}backup load {backup_id}```\n"
+            "value": f"```{ctx.bot.prefix}backup load {backup_id} {chatlog if chatlog > 0 else ''}```\n"
                      f"```{ctx.bot.prefix}backup info {backup_id}```"
         })
         await ctx.client.edit_message(status_msg, embed=embed)
