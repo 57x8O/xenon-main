@@ -95,7 +95,7 @@ class Backups(wkr.Module):
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
-    async def create(self, ctx, chatlog: int = 0):
+    async def create(self, ctx, chatlog: int = None):
         """
         Create a backup
         
@@ -110,15 +110,15 @@ class Backups(wkr.Module):
         max_backups = MAX_BACKUPS
         if ctx.premium == checks.PremiumLevel.ONE:
             max_backups = 50
-            chatlog = min(chatlog, 50)
+            chatlog = min(chatlog or 50, 50)
 
         elif ctx.premium == checks.PremiumLevel.TWO:
             max_backups = 100
-            chatlog = min(chatlog, 100)
+            chatlog = min(chatlog or 100, 100)
 
         elif ctx.premium == checks.PremiumLevel.THREE:
             max_backups = 250
-            chatlog = min(chatlog, 250)
+            chatlog = min(chatlog or 250, 250)
 
         backup_count = await ctx.bot.db.backups.count_documents({"creator": ctx.author.id})
         if backup_count >= max_backups:
