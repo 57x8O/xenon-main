@@ -49,19 +49,19 @@ def has_permissions_level(destructive=False):
 
             if required == PermissionLevels.OWNER_ONLY:
                 try:
-                    return await wkr.is_owner(callback)
+                    return await wkr.is_owner(callback).run(ctx, *args, **kwargs)
                 except wkr.NotOwner:
                     raise
 
             elif required == PermissionLevels.DESTRUCTIVE_OWNER and destructive:
                 try:
-                    return await wkr.is_owner(callback)
+                    return await wkr.is_owner(callback).run(ctx, *args, **kwargs)
                 except wkr.NotOwner:
                     raise
 
             else:
                 try:
-                    return await wkr.has_permissions(administrator=True)(callback)
+                    return await wkr.has_permissions(administrator=True)(callback).run(ctx, *args, **kwargs)
                 except wkr.MissingPermissions:
                     raise
 
