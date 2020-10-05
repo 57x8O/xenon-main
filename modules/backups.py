@@ -409,12 +409,12 @@ class Backups(wkr.Module):
                     },
                     {
                         "name": "Last Backup",
-                        "value": utils.datetime_to_string(interval["last"]),
+                        "value": utils.datetime_to_string(interval["last"]) + " UTC",
                         "inline": False
                     },
                     {
                         "name": "Next Backup",
-                        "value": utils.datetime_to_string(interval["next"]),
+                        "value": utils.datetime_to_string(interval["next"]) + " UTC",
                         "inline": False
                     }
                 ]

@@ -150,7 +150,7 @@ class Admin(wkr.Module):
                 },
                 {
                     "name": "Reset After",
-                    "value": f"{utils.timedelta_to_string(reset_after)} ({utils.datetime_to_string(reset)})",
+                    "value": f"{utils.timedelta_to_string(reset_after)} ({utils.datetime_to_string(reset)} UTC)",
                     "inline": True
                 }
             ]

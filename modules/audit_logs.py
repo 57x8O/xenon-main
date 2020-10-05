@@ -39,7 +39,7 @@ class AuditLogList(wkr.ListMenu):
         async for audit_log in logs:
             type = AuditLogType(audit_log["type"])
             items.append((
-                utils.datetime_to_string(audit_log["timestamp"]),
+                utils.datetime_to_string(audit_log["timestamp"]) + " UTC",
                 f"__{type.name.replace('_', ' ')}__: {text_formats[type].format(**audit_log, **audit_log['extra'])}"
             ))
 
