@@ -74,7 +74,7 @@ class AuditLogs(wkr.Module):
 
         __Examples__
 
-        ```{b.prefix}backup list```
+        ```{b.prefix}auditlogs```
         """
         menu = AuditLogList(ctx)
         await menu.start()
