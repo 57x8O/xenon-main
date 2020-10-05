@@ -70,9 +70,9 @@ class Backups(wkr.Module):
         raise ctx.f.SUCCESS(f"Successfully transferred backup.")
 
     @backup.command(aliases=("c",))
-    @wkr.guild_only
+    @wkr.guild_onl
     @checks.has_permissions_level()
-    @wkr.bot_has_permissions(administrator=True)
+    @wkr.bot_has_permissions(ban_members=True)
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def create(self, ctx):
         """
@@ -367,7 +367,7 @@ class Backups(wkr.Module):
     @backup.command(aliases=("iv",))
     @wkr.guild_only
     @checks.has_permissions_level()
-    @wkr.bot_has_permissions(administrator=True)
+    @wkr.bot_has_permissions(ban_members=True)
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def interval(self, ctx, *interval):
         """
