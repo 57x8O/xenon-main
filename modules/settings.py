@@ -52,7 +52,7 @@ class Settings(wkr.Module):
         Set the permissions level for your server
 
         This affects the following commands:
-        `backup load`, `backup create`, `template load`, `backup interval`
+        `backup load`, `backup create`, `template load`, `backup interval`, `chatlog create`, `chatlog load`, `copy`
 
         __Levels__
 
