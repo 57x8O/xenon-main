@@ -10,7 +10,7 @@ from backups import BackupSaver, BackupLoader
 class Copy(wkr.Module):
     @wkr.Module.command()
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)

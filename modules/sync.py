@@ -96,7 +96,7 @@ class Sync(wkr.Module):
 
     @sync.command(aliases=("del", "remove", "rm"))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     async def delete(self, ctx, sync_id):
@@ -139,7 +139,7 @@ class Sync(wkr.Module):
 
     @sync.command(aliases=("channels", "msg"))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     async def messages(self, ctx, direction, target: wkr.ChannelConverter):
@@ -244,7 +244,7 @@ class Sync(wkr.Module):
 
     @sync.command()
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     async def bans(self, ctx, direction, target):

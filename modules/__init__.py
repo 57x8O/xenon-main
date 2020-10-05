@@ -9,6 +9,7 @@ from .sync import Sync
 from .copy import Copy
 from .chatlog import Chatlog
 from .audit_logs import AuditLogs
+from .settings import Settings
 
 
-to_load = (Help, Admin, Backups, Basics, Templates, Redis, Blacklist, Sync, Copy, Chatlog, AuditLogs)
+to_load = (Help, Admin, Backups, Basics, Templates, Redis, Blacklist, Sync, Copy, Chatlog, AuditLogs, Settings)

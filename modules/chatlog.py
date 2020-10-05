@@ -110,7 +110,7 @@ class Chatlog(wkr.Module):
 
     @chatlog.command(aliases=("c",))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level()
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
@@ -168,7 +168,7 @@ class Chatlog(wkr.Module):
 
     @chatlog.command(aliases=("l",))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
