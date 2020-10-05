@@ -45,7 +45,7 @@ class Basics(wkr.Module):
     @wkr.Module.command()
     @wkr.guild_only
     @wkr.cooldown(1, 5)
-    async def shard(self, ctx, guild_id=None):
+    async def shard(self, ctx, guild_id: int = None):
         """
         Get the shard id for this or another discord guild
 
