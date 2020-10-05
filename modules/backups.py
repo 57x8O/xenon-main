@@ -71,7 +71,7 @@ class Backups(wkr.Module):
 
     @backup.command(aliases=("c",))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level()
     @wkr.bot_has_permissions(administrator=True)
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def create(self, ctx):
@@ -123,7 +123,7 @@ class Backups(wkr.Module):
 
     @backup.command(aliases=("l",))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
     async def load(self, ctx, backup_id, *options):
@@ -366,7 +366,7 @@ class Backups(wkr.Module):
 
     @backup.command(aliases=("iv",))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level()
     @wkr.bot_has_permissions(administrator=True)
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def interval(self, ctx, *interval):

@@ -6,6 +6,7 @@ import pymongo.errors
 from os import environ as env
 import msgpack
 
+import checks
 from backups import BackupLoader
 
 
@@ -117,7 +118,7 @@ class Templates(wkr.Module):
 
     @template.command(aliases=("l",))
     @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
+    @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
     async def load(self, ctx, name, *options):
