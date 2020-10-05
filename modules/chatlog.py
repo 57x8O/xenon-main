@@ -330,8 +330,8 @@ class Chatlog(wkr.Module):
                 },
                 {
                     "name": "Time Range",
-                    "value": f"`{utils.datetime_to_string(first_msg.created_at)}`- "
-                             f"`{utils.datetime_to_string(last_msg.created_at)}`",
+                    "value": f"`{utils.datetime_to_string(first_msg.created_at)} UTC`- "
+                             f"`{utils.datetime_to_string(last_msg.created_at)} UTC`",
                     "inline": True
                 }
             ]
