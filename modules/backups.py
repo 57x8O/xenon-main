@@ -70,7 +70,7 @@ class Backups(wkr.Module):
         raise ctx.f.SUCCESS(f"Successfully transferred backup.")
 
     @backup.command(aliases=("c",))
-    @wkr.guild_onl
+    @wkr.guild_only
     @checks.has_permissions_level()
     @wkr.bot_has_permissions(ban_members=True)
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
