@@ -95,6 +95,7 @@ class Settings(wkr.Module):
 
             elif level == "owner":
                 conf_level = checks.PermissionLevels.OWNER_ONLY
+                await ctx.bot.db.intervals.delete_many({"guild": ctx.guild_id, "user": {"$ne": ctx.author.id}})
                 await ctx.f_send("__Changed the permissions level for this server to:__\n"
                                  f"**{PERMISSION_DESCRIPTIONS[conf_level]}**.\n\n"
                                  f"*Use `{ctx.bot.prefix}help settings permissions` to get more info.*",
