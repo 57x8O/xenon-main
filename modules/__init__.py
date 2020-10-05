@@ -7,6 +7,7 @@ from .redis import Redis
 from .blacklist import Blacklist
 from .premium import Premium
 from .audit_logs import AuditLogs
+from .settings import Settings
 
 
-to_load = (Help, Admin, Backups, Basics, Templates, Redis, Blacklist, Premium, AuditLogs)
+to_load = (Help, Admin, Backups, Basics, Templates, Redis, Blacklist, Premium, AuditLogs, Settings)
