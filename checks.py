@@ -51,13 +51,17 @@ def has_permissions_level(destructive=False):
                 try:
                     return await wkr.is_owner(callback).run(ctx, *args, **kwargs)
                 except wkr.NotOwner:
-                    raise
+                    raise ctx.f.ERROR("Only the **server owner** can use this command.\n"
+                                      f"The server owner can change this using "
+                                      f"`{ctx.bot.prefix}help settings permissions`.")
 
             elif required == PermissionLevels.DESTRUCTIVE_OWNER and destructive:
                 try:
                     return await wkr.is_owner(callback).run(ctx, *args, **kwargs)
                 except wkr.NotOwner:
-                    raise
+                    raise ctx.f.ERROR("Only the **server owner** can use this command.\n"
+                                      f"The server owner can change this using "
+                                      f"`{ctx.bot.prefix}help settings permissions`.")
 
             else:
                 try:
