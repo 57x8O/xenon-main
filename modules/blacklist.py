@@ -28,7 +28,7 @@ class BlackListMenu(wkr.ListMenu):
 
             items.append((
                 name,
-                f"```{entry['reason']}``` by <@{entry['staff']}> (`{utils.datetime_to_string(entry['timestamp'])}`)"
+                f"```{entry['reason']}``` by <@{entry['staff']}> (`{utils.datetime_to_string(entry['timestamp'])} UTC`)"
             ))
 
         return items
@@ -77,7 +77,7 @@ class Blacklist(wkr.Module):
                 },
                 {
                     "name": "Timestamp",
-                    "value": utils.datetime_to_string(entry["timestamp"])
+                    "value": utils.datetime_to_string(entry["timestamp"]) + " UTC"
                 }
             ]
         })
