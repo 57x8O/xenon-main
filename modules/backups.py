@@ -500,7 +500,7 @@ class Backups(wkr.Module):
             backup = BackupSaver(self.bot, guild)
             await backup.save()
 
-            await self.bot.db.backups.delete_one({"creator": interval["user"], "data.id": guild.id})
+            await self.bot.db.backups.delete_one({"creator": interval["user"], "data.id": guild.id, "interval": True})
             await self.bot.db.backups.insert_one({
                 "_id": utils.unique_id(),
                 "creator": interval["user"],
