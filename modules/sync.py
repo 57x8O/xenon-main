@@ -348,7 +348,7 @@ class Sync(wkr.Module):
     @wkr.guild_only
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
-    @checks.is_premium()
+    @checks.is_premium(checks.PremiumLevel.THREE)
     async def role(self, ctx, role_a: wkr.RoleConverter, direction, role_b: wkr.RoleConverter):
         """
         Sync role assignments for one role to another role
