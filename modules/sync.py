@@ -19,6 +19,7 @@ class SyncDirection(Enum):
 class SyncType(IntEnum):
     MESSAGES = 0
     BANS = 1
+    ROLE = 2
 
 
 class SyncListMenu(wkr.ListMenu):
@@ -247,7 +248,7 @@ class Sync(wkr.Module):
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
-    async def bans(self, ctx, direction, target):
+    async def bans(self, ctx, direction, target: wkr.FullGuildConverter):
         """
         Sync bans from one guild to another
 
@@ -270,7 +271,7 @@ class Sync(wkr.Module):
             raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
                               f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
 
-        guild = await self.client.get_full_guild(target)
+        guild = await target(ctx)
         await self._check_admin_on(guild, ctx)
 
         async def _create_ban_sync(target, source):
@@ -343,9 +344,82 @@ class Sync(wkr.Module):
             except Exception:
                 traceback.print_exc()
 
+    @sync.command(aliases=("members", "assignments"))
+    @wkr.guild_only
+    @checks.has_permissions_level(destructive=True)
+    @wkr.bot_has_permissions(administrator=True)
+    @checks.is_premium()
+    async def role(self, ctx, role_a: wkr.RoleConverter, direction, role_b: wkr.RoleConverter):
+        """
+        Sync role assignments for one role to another role
+        The roles can be on different servers
+
+
+        __Arguments__
+
+        **source_role**: The id of the first role (role A)
+        **direction**: `from`, `to` or `both`
+        **target**: The id of the second role (role B)
+
+
+        __Examples__
+
+        Adding role A to member X will also add role B to member X:
+        ```{b.prefix}sync role 410288579140354049 from 410488579140354049```
+        Adding role B to member X will also add role A to member X:
+        ```{b.prefix}sync role 410288579140354049 to 410488579140354049```
+        Both combined:
+        ```{b.prefix}sync role 410288579140354049 both 410488579140354049```
+        """
+        try:
+            direction = getattr(SyncDirection, direction.upper())
+        except AttributeError:
+            raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
+                              f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
+
+        source = await role_a(ctx)
+        source_guild = await ctx.client.get_full_guild(source.guild_id)
+        await self._check_admin_on(source_guild, ctx)
+        target = await role_b(ctx)
+        target_guild = await ctx.client.get_full_guild(target.guild_id)
+        await self._check_admin_on(target_guild, ctx)
+
+        async def _create_role_sync(target_id, source_id):
+            sync_id = utils.unique_id()
+            try:
+                await ctx.bot.db.premium.syncs.insert_one({
+                    "_id": sync_id,
+                    "guilds": [target_guild.id, source_guild.id],
+                    "type": SyncType.ROLE,
+                    "target": target_id,
+                    "source": source_id,
+                    "uses": 0
+                })
+            except pymongo.errors.DuplicateKeyError:
+                await ctx.f_send(
+                    f"Sync from `{source_id}` to `{target_id}` **already exists**.",
+                    f=ctx.f.INFO
+                )
+
+            else:
+                await ctx.f_send(
+                    f"Successfully **created sync** from `{source_id}` to `{target_id}` with the id `{sync_id}`",
+                    f=ctx.f.SUCCESS
+                )
+                await ctx.bot.create_audit_log(
+                    utils.AuditLogType.ROLE_SYNC_CREATE, [source_guild.id, target_guild.id], ctx.author.id,
+                    {"source": source_id, "target": target_id, "id": sync_id}
+                )
+
+        if direction == SyncDirection.FROM or direction == SyncDirection.BOTH:
+            await _create_role_sync(source.id, target.id)
+
+        if direction == SyncDirection.TO or direction == SyncDirection.BOTH:
+            await _create_role_sync(target.id, source.id)
+
     @wkr.Module.listener()
     async def on_guild_delete(self, _, data):
-        await self.bot.db.premium.syncs.delete_many({"$or": [{"source": data["id"]}, {"target": data["id"]}]})
+        await self.bot.db.premium.syncs.delete_many({"guilds": data["id"]})
 
     @wkr.Module.listener()
     async def on_channel_delete(self, _, data):
