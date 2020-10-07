@@ -447,32 +447,32 @@ class Sync(wkr.Module):
             added_roles = [r for r in data["roles"] if r not in prev_roles]
             removed_roles = [r for r in prev_roles if r not in data["roles"]]
 
-            for role_id in added_roles:
-                syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
-                async for sync in syncs:
-                    await self.client.add_role(
-                        wkr.Snowflake(sync["target_guild"]),
-                        wkr.Snowflake(data["user"]["id"]),
-                        wkr.Snowflake(sync["target"]),
-                        reason=f"Role sync {sync['_id']}"
-                    )
-
-            for role_id in removed_roles:
-                syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
-                async for sync in syncs:
-                    await self.client.remove_role(
-                        wkr.Snowflake(sync["target_guild"]),
-                        wkr.Snowflake(data["user"]["id"]),
-                        wkr.Snowflake(sync["target"]),
-                        reason=f"Role sync {sync['_id']}"
-                    )
-
         finally:
             await self.client.redis.hset(
                 f"role_syncs:{data['guild_id']}",
                 data['user']['id'],
                 msgpack.packb(data["roles"])
             )
+
+        for role_id in added_roles:
+            syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
+            async for sync in syncs:
+                await self.client.add_role(
+                    wkr.Snowflake(sync["target_guild"]),
+                    wkr.Snowflake(data["user"]["id"]),
+                    wkr.Snowflake(sync["target"]),
+                    reason=f"Role sync {sync['_id']}"
+                )
+
+        for role_id in removed_roles:
+            syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
+            async for sync in syncs:
+                await self.client.remove_role(
+                    wkr.Snowflake(sync["target_guild"]),
+                    wkr.Snowflake(data["user"]["id"]),
+                    wkr.Snowflake(sync["target"]),
+                    reason=f"Role sync {sync['_id']}"
+                )
 
     @wkr.Module.listener()
     async def on_guild_member_remove(self, _, data):
