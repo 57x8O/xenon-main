@@ -66,11 +66,17 @@ class Sync(wkr.Module):
         )
 
         await self.bot.subscribe("*.message_create", shared=True)
+
         await self.bot.subscribe("*.guild_ban_add", shared=True)
         await self.bot.subscribe("*.guild_ban_remove", shared=True)
 
+        await self.bot.subscribe("*.guild_member_add", shared=True)
+        await self.bot.subscribe("*.guild_member_update", shared=True)
+        await self.bot.subscribe("*.guild_member_remove", shared=True)
+
         await self.bot.subscribe("*.channel_delete", shared=True)
         await self.bot.subscribe("*.guild_delete", shared=True)
+        await self.bot.subscribe("*.guild_role_delete", shared=True)
 
     @wkr.Module.command()
     async def sync(self, ctx):
@@ -385,29 +391,30 @@ class Sync(wkr.Module):
         target_guild = await ctx.client.get_full_guild(target.guild_id)
         await self._check_admin_on(target_guild, ctx)
 
-        async def _create_role_sync(target_, source):
+        async def _create_role_sync(target_role, source_role):
             sync_id = utils.unique_id()
             try:
                 await ctx.bot.db.premium.syncs.insert_one({
                     "_id": sync_id,
                     "guilds": [target_guild.id, source_guild.id],
                     "type": SyncType.ROLE,
-                    "target": target.id,
-                    "target_guild": target.guild_id,
-                    "source": source.id,
-                    "source_guild": source.guild_id,
+                    "target": target_role.id,
+                    "target_guild": target_role.guild_id,
+                    "source": source_role.id,
+                    "source_guild": source_role.guild_id,
                     "uses": 0
                 })
             except pymongo.errors.DuplicateKeyError:
                 await ctx.f_send(
-                    f"Sync from {source.name} (`{source.id}`) to {target.name} (`{target.id}`) **already exists**.",
+                    f"Sync from {source_role.name} (`{source_role.id}`) to {target_role.name} (`{target_role.id}`) "
+                    f"**already exists**.",
                     f=ctx.f.INFO
                 )
 
             else:
                 await ctx.f_send(
-                    f"Successfully **created sync** from {source.name} (`{source.id}`) to "
-                    f"{target.name} (`{target.id}`)with the id `{sync_id}`",
+                    f"Successfully **created sync** from {source_role.name} (`{source_role.id}`) to "
+                    f"{target_role.name} (`{target_role.id}`)with the id `{sync_id}`",
                     f=ctx.f.SUCCESS
                 )
                 await ctx.bot.create_audit_log(
@@ -440,28 +447,26 @@ class Sync(wkr.Module):
             added_roles = [r for r in data["roles"] if r not in prev_roles]
             removed_roles = [r for r in prev_roles if r not in data["roles"]]
 
-            def changed_roles():
-                yield from added_roles
-                yield from removed_roles
-
-            for role_id in changed_roles():
+            for role_id in added_roles:
                 syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
                 async for sync in syncs:
-                    if role_id is added_roles:
-                        await self.client.add_role(
-                            wkr.Snowflake(syncs["target_guild"]),
-                            wkr.Snowflake(data["user"]["id"]),
-                            wkr.Snowflake(syncs["target"]),
-                            reason=f"Role sync {sync['_id']}"
-                        )
+                    await self.client.add_role(
+                        wkr.Snowflake(sync["target_guild"]),
+                        wkr.Snowflake(data["user"]["id"]),
+                        wkr.Snowflake(sync["target"]),
+                        reason=f"Role sync {sync['_id']}"
+                    )
 
-                    else:
-                        await self.client.remove_role(
-                            wkr.Snowflake(syncs["target_guild"]),
-                            wkr.Snowflake(data["user"]["id"]),
-                            wkr.Snowflake(syncs["target"]),
-                            reason=f"Role sync {sync['_id']}"
-                        )
+            for role_id in removed_roles:
+                syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
+                async for sync in syncs:
+                    await self.client.remove_role(
+                        wkr.Snowflake(sync["target_guild"]),
+                        wkr.Snowflake(data["user"]["id"]),
+                        wkr.Snowflake(sync["target"]),
+                        reason=f"Role sync {sync['_id']}"
+                    )
+
         finally:
             await self.client.redis.hset(
                 f"role_syncs:{data['guild_id']}",
