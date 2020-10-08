@@ -102,6 +102,11 @@ class Backups(wkr.Module):
         Get more help on the [wiki](https://wiki.xenon.bot/backups#creating-a-backup).
 
 
+        __Arguments__
+
+        **chatlog**: The count of messages to save per channel
+
+
         __Examples__
 
         No chatlog: ```{b.prefix}backup create```
@@ -415,11 +420,15 @@ class Backups(wkr.Module):
         **interval**: The time between every backup or "off". (min 24h)
                     Supported units: hours(h), days(d), weeks(w)
                     Example: 1d 12h
+        **chatlog**: The count of messages to save per channel in each interval backup
 
 
         __Examples__
 
+        Without chatlog:
         ```{b.prefix}backup interval 24h```
+        With chatlog:
+        ```{b.prefix}backup interval 24h 25```
         """
         if len(interval) > 0:
             await ctx.invoke("backup interval on " + " ".join(interval))
@@ -469,7 +478,9 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def on(self, ctx, *interval):
         """
-        Turn on automated backups
+        Turn on automated backups for this server
+
+        Get more help on the [wiki](https://wiki.xenon.bot/en/backups#automated-backups-interval).
 
 
         __Arguments__
@@ -477,11 +488,15 @@ class Backups(wkr.Module):
         **interval**: The time between every backup. (min 24h)
                     Supported units: hours(h), days(d), weeks(w)
                     Example: 1d 12h
+        **chatlog**: The count of messages to save per channel in each interval backup
 
 
         __Examples__
 
+        Without chatlog:
         ```{b.prefix}backup interval on 24h```
+        With chatlog:
+        ```{b.prefix}backup interval on 24h 25```
         """
         units = {
             "h": 1,
@@ -547,7 +562,7 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def off(self, ctx):
         """
-        Turn off automated backups
+        Turn off automated backups for this server
 
 
         __Examples__
