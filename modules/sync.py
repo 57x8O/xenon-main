@@ -384,6 +384,10 @@ class Sync(wkr.Module):
             raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
                               f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
 
+        if direction == SyncDirection.BOTH:
+            raise ctx.f.ERROR("Syncing role assignments in **both directions can cause bugs**."
+                              "This will eventually be fixed at some point.")
+
         source = await role_a(ctx)
         source_guild = await ctx.client.get_full_guild(source.guild_id)
         await self._check_admin_on(source_guild, ctx)
@@ -406,15 +410,15 @@ class Sync(wkr.Module):
                 })
             except pymongo.errors.DuplicateKeyError:
                 await ctx.f_send(
-                    f"Sync from {source_role.name} (`{source_role.id}`) to {target_role.name} (`{target_role.id}`) "
+                    f"Sync from `{source_role.name}` (`{source_role.id}`) to `{target_role.name}` (`{target_role.id}`) "
                     f"**already exists**.",
                     f=ctx.f.INFO
                 )
 
             else:
                 await ctx.f_send(
-                    f"Successfully **created sync** from {source_role.name} (`{source_role.id}`) to "
-                    f"{target_role.name} (`{target_role.id}`)with the id `{sync_id}`",
+                    f"Successfully **created sync** from `{source_role.name}` (`{source_role.id}`) to "
+                    f"`{target_role.name}` (`{target_role.id}`) with the id `{sync_id}`",
                     f=ctx.f.SUCCESS
                 )
                 await ctx.bot.create_audit_log(
