@@ -410,7 +410,7 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def interval(self, ctx, *interval):
         """
-        Manage automated backups
+        Manage automated backups for this server
         
         Get more help on the [wiki](https://wiki.xenon.bot/en/backups#automated-backups-interval).
 

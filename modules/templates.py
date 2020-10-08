@@ -97,22 +97,10 @@ class Templates(wkr.Module):
         """
         await ctx.invoke("help template")
 
-    @template.command(aliases=("c",))
-    @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
-    @wkr.bot_has_permissions(administrator=True)
+    @template.command(aliases=("c",), hidden=True)
     @wkr.cooldown(1, 30)
-    async def create(self, ctx, name, *, description):
-        """
-        Create a **PUBLIC** template from this server
-        Use `{b.prefix}backup create` if you simply want to save or clone your server.
-
-
-        __Examples__
-
-        ```{b.prefix}template create starter A basic template for new servers```
-        """
-        raise ctx.f.ERROR("This command is disabled. Please use https://templates.xenon.bot to add new templates, "
+    async def create(self, ctx):
+        raise ctx.f.ERROR("Please use https://templates.xenon.bot to add new templates, "
                           "you can find help on the [wiki](https://wiki.xenon.bot/en/templates#creating-a-template) "
                           "for how to create new templates.")
 
@@ -123,14 +111,15 @@ class Templates(wkr.Module):
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
     async def load(self, ctx, name, *options):
         """
-        Load a template
+        Load a template from the [website](https://templates.xenon.bot)
+        Click the "Use" button on the website, select "Existing Server" and copy the command.
 
         You can find more help on the [wiki](https://wiki.xenon.bot/templates#loading-a-template).
 
 
         __Arguments__
 
-        **name**: The name of the template
+        **name**: The name or id of the template
         **options**: A list of options (See examples)
 
 
@@ -226,7 +215,8 @@ class Templates(wkr.Module):
     @wkr.cooldown(1, 10)
     async def list(self, ctx, *, search):
         """
-        Get a list of the available templates, you should also check out the [templates](https://templates.xenon.bot) site.
+        Get a list of the available templates
+        You should also check out the [templates](https://templates.xenon.bot) site.
 
 
         __Examples__
