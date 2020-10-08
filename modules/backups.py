@@ -371,7 +371,7 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def interval(self, ctx, *interval):
         """
-        Manage automated backups
+        Manage automated backups for this server
         
         Get more help on the [wiki](https://wiki.xenon.bot/en/backups#automated-backups-interval).
 
@@ -424,7 +424,9 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def on(self, ctx, *interval):
         """
-        Turn on automated backups
+        Turn on automated backups for this server
+
+        Get more help on the [wiki](https://wiki.xenon.bot/en/backups#automated-backups-interval).
 
 
         __Arguments__
@@ -475,7 +477,7 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def off(self, ctx):
         """
-        Turn off automated backups
+        Turn off automated backups for this server
 
 
         __Examples__
