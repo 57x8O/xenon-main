@@ -617,7 +617,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id of the latest automated backup
+        **backup_id**: The id of the backup or the server id of the latest automated backup
 
 
         __Examples__
@@ -650,7 +650,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id of the latest automated backup
+        **backup_id**: The id of the backup or the server id of the latest automated backup
 
 
         __Examples__
@@ -681,7 +681,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id of the latest automated backup
+        **backup_id**: The id of the backup or the server id of the latest automated backup
 
 
         __Examples__

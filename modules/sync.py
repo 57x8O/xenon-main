@@ -84,7 +84,7 @@ class Sync(wkr.Module):
     @checks.is_premium()
     async def list(self, ctx):
         """
-        Get a list of syncs associated with this guild
+        Get a list of syncs associated with this server
 
 
         __Examples__
@@ -101,7 +101,7 @@ class Sync(wkr.Module):
     @checks.is_premium()
     async def delete(self, ctx, sync_id):
         """
-        Delete a sync associated with this guild
+        Delete a sync associated with this server
 
 
         __Examples__
@@ -123,19 +123,19 @@ class Sync(wkr.Module):
         try:
             invoker = await self.client.fetch_member(guild, ctx.author.id)
         except wkr.NotFound:
-            raise ctx.f.ERROR("You **need to be member** of the target guild.")
+            raise ctx.f.ERROR("You **need to be member** of the target server.")
 
         perms = invoker.permissions_for_guild(guild)
         if not perms.administrator:
-            raise ctx.f.ERROR("You **need to have `administrator`** in the target guild.")
+            raise ctx.f.ERROR("You **need to have `administrator`** in the target server.")
 
         bot = await self.client.get_bot_member(guild.id)
         if bot is None:
-            raise ctx.f.ERROR("The bot **needs to be member** of the target guild.")
+            raise ctx.f.ERROR("The bot **needs to be member** of the target server.")
 
         bot_perms = bot.permissions_for_guild(guild)
         if not bot_perms.administrator:
-            raise ctx.f.ERROR("The bot **needs to have `administrator`** in the target guild.")
+            raise ctx.f.ERROR("The bot **needs to have `administrator`** in the target server.")
 
     @sync.command(aliases=("channels", "msg"))
     @wkr.guild_only
@@ -249,19 +249,19 @@ class Sync(wkr.Module):
     @checks.is_premium()
     async def bans(self, ctx, direction, target):
         """
-        Sync bans from one guild to another
+        Sync bans from one server to another
 
 
         __Arguments__
 
         **direction**: `from`, `to` or `both`
-        **target**: The target guild
+        **target**: The target server
 
 
         __Examples__
 
-        From the target to this guild: ```{b.prefix}sync bans from 410488579140354049```
-        From this guild to the target: ```{b.prefix}sync bans to 410488579140354049```
+        From the target to this server: ```{b.prefix}sync bans from 410488579140354049```
+        From this server to the target: ```{b.prefix}sync bans to 410488579140354049```
         Both directions: ```{b.prefix}sync bans both 410488579140354049```
         """
         try:

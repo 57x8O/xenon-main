@@ -219,17 +219,17 @@ class Admin(wkr.Module):
             raise ctx.f.ERROR(f"`{user}` is **not in the staff list**.")
 
     @wkr.Module.command(hidden=True)
-    async def loader(self, ctx, guild_id=None):
-        guild_id = guild_id or ctx.guild_id
-        status = await ctx.bot.redis.get(f"loaders:{guild_id}")
+    async def loader(self, ctx, server_id=None):
+        server_id = server_id or ctx.guild_id
+        status = await ctx.bot.redis.get(f"loaders:{server_id}")
         if status is None:
-            raise ctx.f.INFO(f"There is **no loader running** on the guild `{guild_id}`.")
+            raise ctx.f.INFO(f"There is **no loader running** on the server `{server_id}`.")
 
-        raise ctx.f.INFO(f"Current **loader status** on the guild `{guild_id}`:```{status.decode('utf-8')}```")
+        raise ctx.f.INFO(f"Current **loader status** on the server `{server_id}`:```{status.decode('utf-8')}```")
 
     @loader.command(aliases=("cancel", "abort"))
     @checks.is_staff()
-    async def stop(self, ctx, guild_id=None):
-        guild_id = guild_id or ctx.guild_id
-        await ctx.bot.redis.delete(f"loaders:{guild_id}")
-        raise ctx.f.SUCCESS(f"**Cancelled loader** on guild `{guild_id}`.")
+    async def stop(self, ctx, server_id=None):
+        server_id = server_id or ctx.guild_id
+        await ctx.bot.redis.delete(f"loaders:{server_id}")
+        raise ctx.f.SUCCESS(f"**Cancelled loader** on server `{server_id}`.")

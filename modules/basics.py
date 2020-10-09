@@ -6,7 +6,7 @@ class Basics(wkr.Module):
     @wkr.has_permissions(administrator=True)
     async def leave(self, ctx):
         """
-        Let the bot leave this guild
+        Let the bot leave this server
         """
         await ctx.send("bye ;(")
         await ctx.bot.leave_guild(wkr.Snowflake(ctx.guild_id))
@@ -45,24 +45,24 @@ class Basics(wkr.Module):
     @wkr.Module.command()
     @wkr.guild_only
     @wkr.cooldown(1, 5)
-    async def shard(self, ctx, guild_id: int = None):
+    async def shard(self, ctx, server_id: int = None):
         """
-        Get the shard id for this or another discord guild
+        Get the shard id for this or another discord server
 
 
         __Arguments__
 
-        **guild_id**: The id of the guild (this guild by default)
+        **server_id**: The id of the server (this server by default)
 
 
         __Examples__
 
-        This guild: ```{b.prefix}shard```
-        Another guild: ```{b.prefix}shard 410488579140354049```
+        This server: ```{b.prefix}shard```
+        Another server: ```{b.prefix}shard 410488579140354049```
         """
-        guild_id = guild_id or ctx.guild_id
-        shard_id = await ctx.bot.guild_shard(guild_id)
-        raise ctx.f.INFO(f"**The guild** with the id {guild_id} belongs to the **shard {shard_id}**.\n"
+        server_id = server_id or ctx.guild_id
+        shard_id = await ctx.bot.guild_shard(server_id)
+        raise ctx.f.INFO(f"**The server** with the id {server_id} belongs to the **shard {shard_id}**.\n"
                          f"This might change at any time.")
 
     @wkr.Module.command(aliases=["iv"])

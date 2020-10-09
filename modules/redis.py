@@ -15,7 +15,7 @@ class Redis(wkr.Module):
                 "title": "Cache Stats",
                 "fields": [
                     {
-                        "name": "Guilds",
+                        "name": "Servers",
                         "value": guild_count,
                         "inline": True
                     },
@@ -38,22 +38,22 @@ class Redis(wkr.Module):
 
     @cache.command()
     @wkr.is_bot_owner
-    async def guild(self, ctx, guild_id):
-        if not await ctx.bot.redis.hexists("guilds", guild_id):
-            await ctx.f_send("Guild is not in cache. Fetching and adding ...", f=ctx.f.WORKING)
+    async def guild(self, ctx, server_id):
+        if not await ctx.bot.redis.hexists("guilds", server_id):
+            await ctx.f_send("Server is not in cache. Fetching and adding ...", f=ctx.f.WORKING)
             try:
-                guild = await ctx.bot.fetch_guild(guild_id)
-                data = guild.to_dict()
+                server = await ctx.bot.fetch_guild(server_id)
+                data = server.to_dict()
                 data.pop("emojis", None)
                 data.pop("voice_states", None)
                 data.pop("presences", None)
                 await ctx.bot.redis.hmset_dict("roles", {r["id"]: msgpack.packb(r) for r in data.pop("roles", [])})
-                await ctx.bot.redis.hset("guilds", guild_id, msgpack.packb(data))
+                await ctx.bot.redis.hset("guilds", server_id, msgpack.packb(data))
 
             except wkr.NotFound:
-                raise ctx.f.ERROR("Guild not found.")
+                raise ctx.f.ERROR("Server not found.")
 
-        result = await ctx.bot.redis.hget("guilds", guild_id)
+        result = await ctx.bot.redis.hget("guilds", server_id)
         data = msgpack.unpackb(result)
         raise ctx.f.INFO(f"```js\n{json.dumps(data, indent=1)}\n```")
 
@@ -75,14 +75,14 @@ class Redis(wkr.Module):
 
     @cache.command()
     @wkr.is_bot_owner
-    async def role(self, ctx, role_id, guild_id=None):
+    async def role(self, ctx, role_id, server_id=None):
         if not await ctx.bot.redis.hexists("roles", role_id):
-            if guild_id is None:
-                raise ctx.f.ERROR("Role is not in cache. Provide a guild_id to fetch and add it.")
+            if server_id is None:
+                raise ctx.f.ERROR("Role is not in cache. Provide a server_id to fetch and add it.")
 
             await ctx.f_send("Role is not in cache. Fetching and adding ...", f=ctx.f.WORKING)
             try:
-                roles = await ctx.bot.fetch_roles(wkr.Snowflake(guild_id))
+                roles = await ctx.bot.fetch_roles(wkr.Snowflake(server_id))
                 await ctx.bot.redis.hmset_dict("roles", {r.id: msgpack.packb(r.to_dict()) for r in roles})
 
             except wkr.NotFound:
