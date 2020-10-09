@@ -3,7 +3,6 @@ import utils
 import asyncio
 import pymongo
 import pymongo.errors
-from os import environ as env
 import msgpack
 
 import checks
@@ -47,22 +46,6 @@ class TemplateListMenu(wkr.ListMenu):
 
 
 class Templates(wkr.Module):
-    APPROVAL_CHANNEL = env.get("TPL_APPROVAL_CHANNEL")
-    LIST_CHANNEL = env.get("TPL_LIST_CHANNEL")
-    FEATURED_CHANNEL = env.get("TPL_FEATURED_CHANNEL")
-    APPROVAL_GUILD = env.get("TPL_APPROVAL_GUILD")
-    APPROVAL_OPTIONS = {}
-
-    @wkr.Module.listener()
-    async def on_load(self, *_, **__):
-        pass
-        # Handled by the templates site
-        # await self.bot.db.templates.create_index([("name", pymongo.TEXT), ("description", pymongo.TEXT)])
-        # await self.bot.db.templates.create_index([("approved", pymongo.ASCENDING)])
-        # await self.bot.db.templates.create_index([("featured", pymongo.ASCENDING)])
-        # await self.bot.db.templates.create_index([("uses", pymongo.ASCENDING)])
-        # await self.bot.db.templates.create_index([("name", pymongo.ASCENDING)], unique=True)
-
     async def _crossload_template(self, template_id):
         template_id = template_id.strip("/").split("/")[-1]
         try:
@@ -93,7 +76,8 @@ class Templates(wkr.Module):
     @wkr.Module.command(aliases=("temp", "tpl"))
     async def template(self, ctx):
         """
-        Create & load **PUBLIC** templates
+        Find and load templates
+        You can find templates on the [website](https://templates.xenon.bot)
         """
         await ctx.invoke("help template")
 
@@ -111,8 +95,8 @@ class Templates(wkr.Module):
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
     async def load(self, ctx, name, *options):
         """
-        Load a template from the [website](https://templates.xenon.bot)
-        Click the "Use" button on the website, select "Existing Server" and copy the command.
+        Load one of the public templates
+        Choose a template on the website [website](https://templates.xenon.bot) and click the "Use" button on the website, select "Existing Server" and copy the command.
 
         You can find more help on the [wiki](https://wiki.xenon.bot/templates#loading-a-template).
 
