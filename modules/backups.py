@@ -505,7 +505,7 @@ class Backups(wkr.Module):
         }
 
         hours = 0
-        chatlog = 0
+        chatlog = None
         for arg in interval:
             try:
                 chatlog = int(arg)
@@ -522,17 +522,17 @@ class Backups(wkr.Module):
             hours += count * multiplier
 
         if ctx.premium == checks.PremiumLevel.ONE:
-            chatlog = min(chatlog, 50)
+            chatlog = min(chatlog or 50, 50)
             hours = max(hours, 12)
             keep = 2
 
         elif ctx.premium == checks.PremiumLevel.TWO:
-            chatlog = min(chatlog, 100)
+            chatlog = min(chatlog or 100, 100)
             hours = max(hours, 8)
             keep = 4
 
         elif ctx.premium == checks.PremiumLevel.THREE:
-            chatlog = min(chatlog, 250)
+            chatlog = min(chatlog or 250, 250)
             hours = max(hours, 4)
             keep = 8
 
