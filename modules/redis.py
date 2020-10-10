@@ -48,6 +48,7 @@ class Redis(wkr.Module):
                 data.pop("voice_states", None)
                 data.pop("presences", None)
                 await ctx.bot.redis.hmset_dict("roles", {r["id"]: msgpack.packb(r) for r in data.pop("roles", [])})
+
                 await ctx.bot.redis.hset("server", server_id, msgpack.packb(data))
 
             except wkr.NotFound:
