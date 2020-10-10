@@ -69,7 +69,7 @@ class AuditLogs(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def auditlogs(self, ctx):
         """
-        Get a list of actions that were recently taken on this guild
+        Get a list of actions that were recently taken on this server
         (backup create, backup load, template load, copy from, copy to,
         chatlog create, chatlog load, sync create, sync delete)
 
