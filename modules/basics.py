@@ -47,7 +47,7 @@ class Basics(wkr.Module):
     @wkr.cooldown(1, 5)
     async def shard(self, ctx, server_id: int = None):
         """
-        Get the shard id for this or another discord server
+        Get the shard id for this or another server
 
 
         __Arguments__

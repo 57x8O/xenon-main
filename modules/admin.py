@@ -224,7 +224,6 @@ class Admin(wkr.Module):
         status = await ctx.bot.redis.get(f"loaders:{server_id}")
         if status is None:
             raise ctx.f.INFO(f"There is **no loader running** on the server `{server_id}`.")
-
         raise ctx.f.INFO(f"Current **loader status** on the server `{server_id}`:```{status.decode('utf-8')}```")
 
     @loader.command(aliases=("cancel", "abort"))
