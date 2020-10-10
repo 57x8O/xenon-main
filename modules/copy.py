@@ -14,15 +14,15 @@ class Copy(wkr.Module):
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
-    async def copy(self, ctx, guild_id: wkr.FullGuildConverter, chatlog: int = 0, *options):
+    async def copy(self, ctx, server_id: wkr.FullGuildConverter, chatlog: int = 0, *options):
         """
         Copy a server without creating a backup
 
 
-        **guild_id**: The id of the guild to copy from
+        **server_id**: The id of the server to copy from
         **chatlog**: The count of messages to copy per channel
         """
-        source_guild = await guild_id(ctx)
+        source_guild = await server_id(ctx)
         target_guild = await ctx.get_full_guild()
 
         bot_member = await ctx.client.get_bot_member(source_guild.id)
@@ -51,7 +51,7 @@ class Copy(wkr.Module):
         elif ctx.premium == checks.PremiumLevel.THREE:
             chatlog = min(chatlog, 250)
 
-        warning_msg = await ctx.f_send("Are you sure that you want to copy this guild?\n"
+        warning_msg = await ctx.f_send("Are you sure that you want to copy this server?\n"
                                        f"Please put the managed role called `{ctx.bot.user.name}` above all other "
                                        f"roles before clicking the ✅ reaction.\n\n"
                                        "__**All channels and roles will get replaced!**__\n\n"
