@@ -171,7 +171,12 @@ class Sync(wkr.Module):
             raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
                               f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
 
-        extra_events = Options(**utils.backup_options(extra_events))
+        options = Options(
+            delete=True,
+            edit=True,
+            pin=True
+        )
+        options.update(**utils.backup_options(extra_events))
 
         channel = await target(ctx)
         guild = await self.client.get_full_guild(channel.guild_id)
@@ -189,9 +194,9 @@ class Sync(wkr.Module):
                     "source": source_id,
                     "webhook": webh.to_dict(),
                     "events": {
-                        "delete": extra_events.delete,
-                        "edit": extra_events.edit,
-                        "pin": extra_events.pin
+                        "delete": options.delete,
+                        "edit": options.edit,
+                        "pin": options.pin
                     },
                     "uses": 0
                 })
