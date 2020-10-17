@@ -245,15 +245,19 @@ class Sync(wkr.Module):
         async for sync in syncs:
             webh = wkr.Webhook(sync["webhook"])
             try:
-                await self.client.execute_webhook(
+                new_msg = await self.client.execute_webhook(
                     webh,
                     username=msg.author.name,
                     avatar_url=msg.author.avatar_url,
                     files=files,
                     **msg.to_dict(),
-                    allowed_mentions={"parse": []}
+                    allowed_mentions={"parse": []},
+                    wait=True
                 )
-                await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
+                await self.bot.db.premium.syncs.update_one(sync, {
+                    "$inc": {"uses": 1},
+                    "$push": {"ids": {"$each": [f"{msg.id}:{new_msg.id}"], "$slice": -1000}}
+                })
             except wkr.NotFound:
                 await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
 
