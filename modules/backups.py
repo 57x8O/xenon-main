@@ -130,7 +130,8 @@ class Backups(wkr.Module):
             raise ctx.f.ERROR(
                 f"You have **exceeded the maximum count** of backups. (`{backup_count}/{max_backups}`)\n"
                 f"You need to **delete old backups** with `{ctx.bot.prefix}backup delete <id>` or **buy "
-                f"[Xenon Premium](https://www.patreon.com/merlinfuchs)** to create new backups.."
+                f"[Xenon Premium](https://www.patreon.com/merlinfuchs)** to create new backups.\n\n"
+                f"*You can view your current backups by doing `{ctx.bot.prefix}backup list`.*"
             )
 
         status_msg = await ctx.f_send("**Creating Backup** ...", f=ctx.f.WORKING)
