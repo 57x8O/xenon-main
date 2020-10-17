@@ -222,13 +222,7 @@ class Sync(wkr.Module):
         if direction == SyncDirection.TO or direction == SyncDirection.BOTH:
             await _create_msg_sync(channel.id, ctx.channel_id)
 
-    @wkr.Module.listener()
-    async def on_message_create(self, _, data):
-        msg = wkr.Message(data)
-        if msg.webhook_id:
-            return
-
-        attachments = msg.attachments
+    async def _load_attachments(self, msg):
         files = []
 
         async def _fetch_attachment(attachment):
@@ -237,9 +231,19 @@ class Sync(wkr.Module):
                     fp = io.BytesIO(await resp.read())
                     files.append(wkr.File(fp, filename=attachment["filename"]))
 
-        file_tasks = [self.bot.schedule(_fetch_attachment(att)) for att in attachments]
+        file_tasks = [self.bot.schedule(_fetch_attachment(att)) for att in msg.attachments]
         if file_tasks:
             await asyncio.wait(file_tasks, return_when=asyncio.ALL_COMPLETED)
+
+        return files
+
+    @wkr.Module.listener()
+    async def on_message_create(self, _, data):
+        msg = wkr.Message(data)
+        if msg.webhook_id:
+            return
+
+        files = await self._load_attachments(msg)
 
         syncs = self.bot.db.premium.syncs.find({"source": msg.channel_id, "type": SyncType.MESSAGES})
         async for sync in syncs:
@@ -256,13 +260,79 @@ class Sync(wkr.Module):
                 )
                 await self.bot.db.premium.syncs.update_one(sync, {
                     "$inc": {"uses": 1},
-                    "$push": {"ids": {"$each": [f"{msg.id}:{new_msg.id}"], "$slice": -1000}}
+                    "$push": {"ids": {"$each": [[msg.id, new_msg.id]], "$slice": -1000}}
                 })
             except wkr.NotFound:
                 await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
 
             except Exception:
                 traceback.print_exc()
+
+    @wkr.Module.listener()
+    async def on_message_update(self, _, data):
+        msg = wkr.Message(data)
+        if msg.webhook_id:
+            return
+
+        files = await self._load_attachments(msg)
+
+        syncs = self.bot.db.premium.syncs.find({"source": msg.channel_id, "type": SyncType.MESSAGES})
+        async for sync in syncs:
+            if not sync.get("events", {}).get("edit"):
+                continue
+
+            for mapper in sync.get("ids", []):
+                if mapper[0] == data["id"]:
+                    new_msg_id = mapper[1]
+                    break
+
+            else:
+                continue
+
+            webh = wkr.Webhook(sync["webhook"])
+            try:
+                await self.client.execute_webhook(
+                    webh,
+                    message_id=new_msg_id,
+                    username=msg.author.name,
+                    avatar_url=msg.author.avatar_url,
+                    files=files,
+                    **msg.to_dict(),
+                    allowed_mentions={"parse": []},
+                )
+            except wkr.NotFound:
+                await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
+
+            except Exception:
+                traceback.print_exc()
+
+    @wkr.Module.listener()
+    async def on_message_delete(self, _, data):
+        syncs = self.bot.db.premium.syncs.find({"source": data["channel_id"], "type": SyncType.MESSAGES})
+        async for sync in syncs:
+            if not sync.get("events", {}).get("delete"):
+                continue
+
+            for mapper in sync.get("ids", []):
+                if mapper[0] == data["id"]:
+                    new_msg_id = mapper[1]
+                    break
+
+            else:
+                continue
+
+            webh = wkr.Webhook(sync["webhook"])
+            try:
+                await self.client.delete_webhook_message(webh, wkr.Snowflake(new_msg_id))
+            except wkr.NotFound:
+                await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
+
+            except Exception:
+                traceback.print_exc()
+
+    @wkr.Module.listener()
+    async def on_channel_pins_update(self, _, data):
+        pass
 
     @sync.command()
     @wkr.guild_only
