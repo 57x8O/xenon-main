@@ -8,6 +8,7 @@ import io
 
 import checks
 import utils
+from backups import Options
 
 
 class SyncDirection(Enum):
@@ -142,7 +143,7 @@ class Sync(wkr.Module):
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
-    async def messages(self, ctx, direction, target: wkr.ChannelConverter):
+    async def messages(self, ctx, direction, target: wkr.ChannelConverter, *extra_events):
         """
         Sync messages from one channel to another
 
@@ -151,6 +152,7 @@ class Sync(wkr.Module):
 
         **direction**: `from`, `to` or `both`
         **target**: The target channel (mention or id)
+        **extra_events**: Option list of extra events (delete, edit, pin) (similar to the backup load command)
 
 
         __Examples__
@@ -158,12 +160,18 @@ class Sync(wkr.Module):
         From the target to this channel: ```{b.prefix}sync messages from #general```
         From this channel to the target: ```{b.prefix}sync messages to #general```
         Both directions: ```{b.prefix}sync messages both #general```
+
+        With all extra events: ```{b.prefix}sync messages both #general *```
+        Without any extra events: ```{b.prefix}sync messages both #general !*```
+        Without extra edit events: ```{b.prefix}sync messages both #general !* edit```
         """
         try:
             direction = getattr(SyncDirection, direction.upper())
         except AttributeError:
             raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
                               f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
+
+        extra_events = Options(**utils.backup_options(extra_events))
 
         channel = await target(ctx)
         guild = await self.client.get_full_guild(channel.guild_id)
@@ -180,6 +188,11 @@ class Sync(wkr.Module):
                     "target": target_id,
                     "source": source_id,
                     "webhook": webh.to_dict(),
+                    "events": {
+                        "delete": extra_events.delete,
+                        "edit": extra_events.edit,
+                        "pin": extra_events.pin
+                    },
                     "uses": 0
                 })
             except pymongo.errors.DuplicateKeyError:
