@@ -65,6 +65,9 @@ class Sync(wkr.Module):
         )
 
         await self.bot.subscribe("*.message_create", shared=True)
+        await self.bot.subscribe("*.message_update", shared=True)
+        await self.bot.subscribe("*.message_delete", shared=True)
+
         await self.bot.subscribe("*.guild_ban_add", shared=True)
         await self.bot.subscribe("*.guild_ban_remove", shared=True)
 
@@ -152,7 +155,7 @@ class Sync(wkr.Module):
 
         **direction**: `from`, `to` or `both`
         **target**: The target channel (mention or id)
-        **extra_events**: Option list of extra events (delete, edit, pin) (similar to the backup load command)
+        **extra_events**: Option list of extra events (delete, edit) (similar to the backup load command)
 
 
         __Examples__
@@ -173,8 +176,7 @@ class Sync(wkr.Module):
 
         options = Options(
             delete=True,
-            edit=True,
-            pin=True
+            edit=True
         )
         options.update(**utils.backup_options(extra_events))
 
@@ -195,8 +197,7 @@ class Sync(wkr.Module):
                     "webhook": webh.to_dict(),
                     "events": {
                         "delete": options.delete,
-                        "edit": options.edit,
-                        "pin": options.pin
+                        "edit": options.edit
                     },
                     "uses": 0
                 })
@@ -260,7 +261,7 @@ class Sync(wkr.Module):
                 )
                 await self.bot.db.premium.syncs.update_one(sync, {
                     "$inc": {"uses": 1},
-                    "$push": {"ids": {"$each": [[msg.id, new_msg.id]], "$slice": -1000}}
+                    "$push": {"ids": {"$each": [[msg.id, new_msg.id]], "$slice": -10}}
                 })
             except wkr.NotFound:
                 await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
@@ -329,10 +330,6 @@ class Sync(wkr.Module):
 
             except Exception:
                 traceback.print_exc()
-
-    @wkr.Module.listener()
-    async def on_channel_pins_update(self, _, data):
-        pass
 
     @sync.command()
     @wkr.guild_only
