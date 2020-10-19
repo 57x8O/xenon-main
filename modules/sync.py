@@ -271,13 +271,10 @@ class Sync(wkr.Module):
 
     @wkr.Module.listener()
     async def on_message_update(self, _, data):
-        msg = wkr.Message(data)
-        if msg.webhook_id:
+        if data.get("webhook_id"):
             return
 
-        files = await self._load_attachments(msg)
-
-        syncs = self.bot.db.premium.syncs.find({"source": msg.channel_id, "type": SyncType.MESSAGES})
+        syncs = self.bot.db.premium.syncs.find({"source": data["channel_id"], "type": SyncType.MESSAGES})
         async for sync in syncs:
             if not sync.get("events", {}).get("edit"):
                 continue
@@ -295,10 +292,7 @@ class Sync(wkr.Module):
                 await self.client.execute_webhook(
                     webh,
                     message_id=new_msg_id,
-                    username=msg.author.name,
-                    avatar_url=msg.author.avatar_url,
-                    files=files,
-                    **msg.to_dict(),
+                    **data,
                     allowed_mentions={"parse": []},
                 )
             except wkr.NotFound:
