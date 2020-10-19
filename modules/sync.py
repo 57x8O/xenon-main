@@ -261,7 +261,7 @@ class Sync(wkr.Module):
                 )
                 await self.bot.db.premium.syncs.update_one(sync, {
                     "$inc": {"uses": 1},
-                    "$push": {"ids": {"$each": [[msg.id, new_msg.id]], "$slice": -10}}
+                    "$push": {"ids": {"$each": [[msg.id, new_msg.id]], "$slice": -1000}}
                 })
             except wkr.NotFound:
                 await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
