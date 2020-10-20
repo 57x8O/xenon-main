@@ -361,11 +361,13 @@ class Sync(wkr.Module):
         Sync role assignments for one role to another role
         The roles can be on different servers
 
+        **Creating assignment loops with this is highly discouraged. This also applies to the `both` direction.**
+
 
         __Arguments__
 
         **source_role**: The id of the first role (role A)
-        **direction**: `from`, `to` or `both`
+        **direction**: `from` or `to`
         **target**: The id of the second role (role B)
 
 
