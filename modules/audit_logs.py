@@ -19,7 +19,7 @@ text_formats = {
     AuditLogType.BAN_SYNC_CREATE: "<@{user}> created a ban sync from the server with the id `{source}` to "
                                   "the server with the id `{target}` with the id `{id}`",
     AuditLogType.SYNC_DELETE: "<@{user}> deleted a sync with the id `{id}`",
-    AuditLogType.ROLE_SYNC_CREATE: "<@{user}> created a roöe sync from the role with the id {source} to "
+    AuditLogType.ROLE_SYNC_CREATE: "<@{user}> created a role sync from the role with the id {source} to "
                                       "the role with the id {target} with the id `{id}`",
 }
 
