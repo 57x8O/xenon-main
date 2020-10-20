@@ -3,7 +3,6 @@ import utils
 import asyncio
 import pymongo
 import pymongo.errors
-from os import environ as env
 import msgpack
 
 import checks
@@ -47,22 +46,6 @@ class TemplateListMenu(wkr.ListMenu):
 
 
 class Templates(wkr.Module):
-    APPROVAL_CHANNEL = env.get("TPL_APPROVAL_CHANNEL")
-    LIST_CHANNEL = env.get("TPL_LIST_CHANNEL")
-    FEATURED_CHANNEL = env.get("TPL_FEATURED_CHANNEL")
-    APPROVAL_GUILD = env.get("TPL_APPROVAL_GUILD")
-    APPROVAL_OPTIONS = {}
-
-    @wkr.Module.listener()
-    async def on_load(self, *_, **__):
-        pass
-        # Handled by the templates site
-        # await self.bot.db.templates.create_index([("name", pymongo.TEXT), ("description", pymongo.TEXT)])
-        # await self.bot.db.templates.create_index([("approved", pymongo.ASCENDING)])
-        # await self.bot.db.templates.create_index([("featured", pymongo.ASCENDING)])
-        # await self.bot.db.templates.create_index([("uses", pymongo.ASCENDING)])
-        # await self.bot.db.templates.create_index([("name", pymongo.ASCENDING)], unique=True)
-
     async def _crossload_template(self, template_id):
         template_id = template_id.strip("/").split("/")[-1]
         try:
@@ -93,26 +76,15 @@ class Templates(wkr.Module):
     @wkr.Module.command(aliases=("temp", "tpl"))
     async def template(self, ctx):
         """
-        Create & load **PUBLIC** templates
+        Find and load templates
+        You can find templates on the [website](https://templates.xenon.bot)
         """
         await ctx.invoke("help template")
 
-    @template.command(aliases=("c",))
-    @wkr.guild_only
-    @wkr.has_permissions(administrator=True)
-    @wkr.bot_has_permissions(administrator=True)
+    @template.command(aliases=("c",), hidden=True)
     @wkr.cooldown(1, 30)
-    async def create(self, ctx, name, *, description):
-        """
-        Create a **PUBLIC** template from this server
-        Use `{b.prefix}backup create` if you simply want to save or clone your server.
-
-
-        __Examples__
-
-        ```{b.prefix}template create starter A basic template for new servers```
-        """
-        raise ctx.f.ERROR("This command is disabled. Please use https://templates.xenon.bot to add new templates, "
+    async def create(self, ctx):
+        raise ctx.f.ERROR("Please use https://templates.xenon.bot to add new templates, "
                           "you can find help on the [wiki](https://wiki.xenon.bot/en/templates#creating-a-template) "
                           "for how to create new templates.")
 
@@ -123,14 +95,15 @@ class Templates(wkr.Module):
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
     async def load(self, ctx, name, *options):
         """
-        Load a template
+        Load one of the public templates
+        Choose a template on the website [website](https://templates.xenon.bot) and click the "Use" button on the website, select "Existing Server" and copy the command.
 
         You can find more help on the [wiki](https://wiki.xenon.bot/templates#loading-a-template).
 
 
         __Arguments__
 
-        **name**: The name of the template
+        **name**: The name or id of the template
         **options**: A list of options (See examples)
 
 
@@ -226,7 +199,8 @@ class Templates(wkr.Module):
     @wkr.cooldown(1, 10)
     async def list(self, ctx, *, search):
         """
-        Get a list of the available templates, you should also check out the [templates](https://templates.xenon.bot) site.
+        Get a list of the available templates
+        You should also check out the [templates](https://templates.xenon.bot) site.
 
 
         __Examples__

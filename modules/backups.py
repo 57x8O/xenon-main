@@ -102,9 +102,14 @@ class Backups(wkr.Module):
         Get more help on the [wiki](https://wiki.xenon.bot/backups#creating-a-backup).
 
 
+        __Arguments__
+
+        **chatlog**: The count of messages to save per channel
+
+
         __Examples__
 
-        No chatlog: ```{b.prefix}backup create```
+        No chatlog: ```{b.prefix}backup create 0```
         50 messages per channel: ```{b.prefix}backup create 50```
         """
         max_backups = MAX_BACKUPS
@@ -125,7 +130,8 @@ class Backups(wkr.Module):
             raise ctx.f.ERROR(
                 f"You have **exceeded the maximum count** of backups. (`{backup_count}/{max_backups}`)\n"
                 f"You need to **delete old backups** with `{ctx.bot.prefix}backup delete <id>` or **buy "
-                f"[Xenon Premium](https://www.patreon.com/merlinfuchs)** to create new backups.."
+                f"[Xenon Premium](https://www.patreon.com/merlinfuchs)** to create new backups.\n\n"
+                f"*You can view your current backups by doing `{ctx.bot.prefix}backup list`.*"
             )
 
         status_msg = await ctx.f_send("**Creating Backup** ...", f=ctx.f.WORKING)
@@ -405,7 +411,7 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def interval(self, ctx, *interval):
         """
-        Manage automated backups
+        Manage automated backups for this server
         
         Get more help on the [wiki](https://wiki.xenon.bot/en/backups#automated-backups-interval).
 
@@ -415,11 +421,15 @@ class Backups(wkr.Module):
         **interval**: The time between every backup or "off". (min 24h)
                     Supported units: hours(h), days(d), weeks(w)
                     Example: 1d 12h
+        **chatlog**: The count of messages to save per channel in each interval backup
 
 
         __Examples__
 
+        Without chatlog:
         ```{b.prefix}backup interval 24h```
+        With chatlog:
+        ```{b.prefix}backup interval 24h 25```
         """
         if len(interval) > 0:
             await ctx.invoke("backup interval on " + " ".join(interval))
@@ -469,7 +479,9 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def on(self, ctx, *interval):
         """
-        Turn on automated backups
+        Turn on automated backups for this server
+
+        Get more help on the [wiki](https://wiki.xenon.bot/en/backups#automated-backups-interval).
 
 
         __Arguments__
@@ -477,11 +489,15 @@ class Backups(wkr.Module):
         **interval**: The time between every backup. (min 24h)
                     Supported units: hours(h), days(d), weeks(w)
                     Example: 1d 12h
+        **chatlog**: The count of messages to save per channel in each interval backup
 
 
         __Examples__
 
+        Without chatlog:
         ```{b.prefix}backup interval on 24h```
+        With chatlog:
+        ```{b.prefix}backup interval on 24h 25```
         """
         units = {
             "h": 1,
@@ -490,7 +506,7 @@ class Backups(wkr.Module):
         }
 
         hours = 0
-        chatlog = 0
+        chatlog = None
         for arg in interval:
             try:
                 chatlog = int(arg)
@@ -507,17 +523,17 @@ class Backups(wkr.Module):
             hours += count * multiplier
 
         if ctx.premium == checks.PremiumLevel.ONE:
-            chatlog = min(chatlog, 50)
+            chatlog = min(chatlog or 50, 50)
             hours = max(hours, 12)
             keep = 2
 
         elif ctx.premium == checks.PremiumLevel.TWO:
-            chatlog = min(chatlog, 100)
+            chatlog = min(chatlog or 100, 100)
             hours = max(hours, 8)
             keep = 4
 
         elif ctx.premium == checks.PremiumLevel.THREE:
-            chatlog = min(chatlog, 250)
+            chatlog = min(chatlog or 250, 250)
             hours = max(hours, 4)
             keep = 8
 
@@ -547,7 +563,7 @@ class Backups(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def off(self, ctx):
         """
-        Turn off automated backups
+        Turn off automated backups for this server
 
 
         __Examples__
@@ -602,7 +618,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id of the latest automated backup
+        **backup_id**: The id of the backup or the server id of the latest automated backup
 
 
         __Examples__
@@ -635,7 +651,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id of the latest automated backup
+        **backup_id**: The id of the backup or the server id of the latest automated backup
 
 
         __Examples__
@@ -666,7 +682,7 @@ class Backups(wkr.Module):
 
         __Arguments__
 
-        **backup_id**: The id of the backup or the guild id of the latest automated backup
+        **backup_id**: The id of the backup or the server id of the latest automated backup
 
 
         __Examples__

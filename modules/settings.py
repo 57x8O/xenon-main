@@ -28,6 +28,8 @@ class Settings(wkr.Module):
     async def settings(self, ctx):
         """
         Change Xenons settings for your server
+
+        Get more help on the [wiki](https://wiki.xenon.bot/en/settings).
         """
         await ctx.invoke("help settings")
 
@@ -50,6 +52,8 @@ class Settings(wkr.Module):
     async def permissions(self, ctx, *, level=None):
         """
         Set the permissions level for your server
+
+        Get more help on the [wiki](https://wiki.xenon.bot/en/settings#permissions-settings).
 
         This affects the following commands:
         `backup load`, `backup create`, `template load`, `backup interval`, `chatlog create`, `chatlog load`, `copy`

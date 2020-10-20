@@ -18,7 +18,9 @@ text_formats = {
                                       "<#{target}> with the id `{id}`",
     AuditLogType.BAN_SYNC_CREATE: "<@{user}> created a ban sync from the server with the id `{source}` to "
                                   "the server with the id `{target}` with the id `{id}`",
-    AuditLogType.SYNC_DELETE: "<@{user}> deleted a sync with the id `{id}`"
+    AuditLogType.SYNC_DELETE: "<@{user}> deleted a sync with the id `{id}`",
+    AuditLogType.ROLE_SYNC_CREATE: "<@{user}> created a role sync from the role with the id {source} to "
+                                      "the role with the id {target} with the id `{id}`",
 }
 
 
@@ -67,7 +69,7 @@ class AuditLogs(wkr.Module):
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
     async def auditlogs(self, ctx):
         """
-        Get a list of actions that were recently taken on this guild
+        Get a list of actions that were recently taken on this server
         (backup create, backup load, template load, copy from, copy to,
         chatlog create, chatlog load, sync create, sync delete)
 

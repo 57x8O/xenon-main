@@ -9,6 +9,7 @@ import msgpack
 
 import checks
 import utils
+from backups import Options
 
 
 class SyncDirection(Enum):
@@ -66,6 +67,8 @@ class Sync(wkr.Module):
         )
 
         await self.bot.subscribe("*.message_create", shared=True)
+        await self.bot.subscribe("*.message_update", shared=True)
+        await self.bot.subscribe("*.message_delete", shared=True)
 
         await self.bot.subscribe("*.guild_ban_add", shared=True)
         await self.bot.subscribe("*.guild_ban_remove", shared=True)
@@ -92,7 +95,7 @@ class Sync(wkr.Module):
     @checks.is_premium()
     async def list(self, ctx):
         """
-        Get a list of syncs associated with this guild
+        Get a list of syncs associated with this server
 
 
         __Examples__
@@ -109,7 +112,7 @@ class Sync(wkr.Module):
     @checks.is_premium()
     async def delete(self, ctx, sync_id):
         """
-        Delete a sync associated with this guild
+        Delete a sync associated with this server
 
 
         __Examples__
@@ -131,26 +134,26 @@ class Sync(wkr.Module):
         try:
             invoker = await self.client.fetch_member(guild, ctx.author.id)
         except wkr.NotFound:
-            raise ctx.f.ERROR("You **need to be member** of the target guild.")
+            raise ctx.f.ERROR("You **need to be member** of the target server.")
 
         perms = invoker.permissions_for_guild(guild)
         if not perms.administrator:
-            raise ctx.f.ERROR("You **need to have `administrator`** in the target guild.")
+            raise ctx.f.ERROR("You **need to have `administrator`** in the target server.")
 
         bot = await self.client.get_bot_member(guild.id)
         if bot is None:
-            raise ctx.f.ERROR("The bot **needs to be member** of the target guild.")
+            raise ctx.f.ERROR("The bot **needs to be member** of the target server.")
 
         bot_perms = bot.permissions_for_guild(guild)
         if not bot_perms.administrator:
-            raise ctx.f.ERROR("The bot **needs to have `administrator`** in the target guild.")
+            raise ctx.f.ERROR("The bot **needs to have `administrator`** in the target server.")
 
     @sync.command(aliases=("channels", "msg"))
     @wkr.guild_only
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
-    async def messages(self, ctx, direction, target: wkr.ChannelConverter):
+    async def messages(self, ctx, direction, target: wkr.ChannelConverter, *extra_events):
         """
         Sync messages from one channel to another
 
@@ -159,6 +162,7 @@ class Sync(wkr.Module):
 
         **direction**: `from`, `to` or `both`
         **target**: The target channel (mention or id)
+        **extra_events**: Option list of extra events (delete, edit) (similar to the backup load command)
 
 
         __Examples__
@@ -166,12 +170,22 @@ class Sync(wkr.Module):
         From the target to this channel: ```{b.prefix}sync messages from #general```
         From this channel to the target: ```{b.prefix}sync messages to #general```
         Both directions: ```{b.prefix}sync messages both #general```
+
+        With all extra events: ```{b.prefix}sync messages both #general *```
+        Without any extra events: ```{b.prefix}sync messages both #general !*```
+        Without extra edit events: ```{b.prefix}sync messages both #general !* edit```
         """
         try:
             direction = getattr(SyncDirection, direction.upper())
         except AttributeError:
             raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
                               f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
+
+        options = Options(
+            delete=True,
+            edit=True
+        )
+        options.update(**utils.backup_options(extra_events))
 
         channel = await target(ctx)
         guild = await self.client.get_full_guild(channel.guild_id)
@@ -188,6 +202,10 @@ class Sync(wkr.Module):
                     "target": target_id,
                     "source": source_id,
                     "webhook": webh.to_dict(),
+                    "events": {
+                        "delete": options.delete,
+                        "edit": options.edit
+                    },
                     "uses": 0
                 })
             except pymongo.errors.DuplicateKeyError:
@@ -212,13 +230,7 @@ class Sync(wkr.Module):
         if direction == SyncDirection.TO or direction == SyncDirection.BOTH:
             await _create_msg_sync(channel.id, ctx.channel_id)
 
-    @wkr.Module.listener()
-    async def on_message_create(self, _, data):
-        msg = wkr.Message(data)
-        if msg.webhook_id:
-            return
-
-        attachments = msg.attachments
+    async def _load_attachments(self, msg):
         files = []
 
         async def _fetch_attachment(attachment):
@@ -227,23 +239,93 @@ class Sync(wkr.Module):
                     fp = io.BytesIO(await resp.read())
                     files.append(wkr.File(fp, filename=attachment["filename"]))
 
-        file_tasks = [self.bot.schedule(_fetch_attachment(att)) for att in attachments]
+        file_tasks = [self.bot.schedule(_fetch_attachment(att)) for att in msg.attachments]
         if file_tasks:
             await asyncio.wait(file_tasks, return_when=asyncio.ALL_COMPLETED)
+
+        return files
+
+    @wkr.Module.listener()
+    async def on_message_create(self, _, data):
+        msg = wkr.Message(data)
+        if msg.webhook_id:
+            return
+
+        files = await self._load_attachments(msg)
 
         syncs = self.bot.db.premium.syncs.find({"source": msg.channel_id, "type": SyncType.MESSAGES})
         async for sync in syncs:
             webh = wkr.Webhook(sync["webhook"])
             try:
-                await self.client.execute_webhook(
+                new_msg = await self.client.execute_webhook(
                     webh,
                     username=msg.author.name,
                     avatar_url=msg.author.avatar_url,
                     files=files,
                     **msg.to_dict(),
-                    allowed_mentions={"parse": []}
+                    allowed_mentions={"parse": []},
+                    wait=True
                 )
-                await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
+                await self.bot.db.premium.syncs.update_one(sync, {
+                    "$inc": {"uses": 1},
+                    "$push": {"ids": {"$each": [[msg.id, new_msg.id]], "$slice": -1000}}
+                })
+            except wkr.NotFound:
+                await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
+
+            except Exception:
+                traceback.print_exc()
+
+    @wkr.Module.listener()
+    async def on_message_update(self, _, data):
+        if data.get("webhook_id"):
+            return
+
+        syncs = self.bot.db.premium.syncs.find({"source": data["channel_id"], "type": SyncType.MESSAGES})
+        async for sync in syncs:
+            if not sync.get("events", {}).get("edit"):
+                continue
+
+            for mapper in sync.get("ids", []):
+                if mapper[0] == data["id"]:
+                    new_msg_id = mapper[1]
+                    break
+
+            else:
+                continue
+
+            webh = wkr.Webhook(sync["webhook"])
+            try:
+                await self.client.execute_webhook(
+                    webh,
+                    message_id=new_msg_id,
+                    **data,
+                    allowed_mentions={"parse": []},
+                )
+            except wkr.NotFound:
+                await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
+
+            except Exception:
+                traceback.print_exc()
+
+    @wkr.Module.listener()
+    async def on_message_delete(self, _, data):
+        syncs = self.bot.db.premium.syncs.find({"source": data["channel_id"], "type": SyncType.MESSAGES})
+        async for sync in syncs:
+            if not sync.get("events", {}).get("delete"):
+                continue
+
+            for mapper in sync.get("ids", []):
+                if mapper[0] == data["id"]:
+                    new_msg_id = mapper[1]
+                    break
+
+            else:
+                continue
+
+            webh = wkr.Webhook(sync["webhook"])
+            try:
+                await self.client.delete_webhook_message(webh, wkr.Snowflake(new_msg_id))
             except wkr.NotFound:
                 await self.bot.db.syncs.delete_one({"_id": sync["_id"]})
 
@@ -257,19 +339,19 @@ class Sync(wkr.Module):
     @checks.is_premium()
     async def bans(self, ctx, direction, target: wkr.FullGuildConverter):
         """
-        Sync bans from one guild to another
+        Sync bans from one server to another
 
 
         __Arguments__
 
         **direction**: `from`, `to` or `both`
-        **target**: The target guild
+        **target**: The target server
 
 
         __Examples__
 
-        From the target to this guild: ```{b.prefix}sync bans from 410488579140354049```
-        From this guild to the target: ```{b.prefix}sync bans to 410488579140354049```
+        From the target to this server: ```{b.prefix}sync bans from 410488579140354049```
+        From this server to the target: ```{b.prefix}sync bans to 410488579140354049```
         Both directions: ```{b.prefix}sync bans both 410488579140354049```
         """
         try:

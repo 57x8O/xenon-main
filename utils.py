@@ -142,3 +142,4 @@ class AuditLogType(IntEnum):
     MESSAGE_SYNC_CREATE = 8
     BAN_SYNC_CREATE = 9
     SYNC_DELETE = 10
+    ROLE_SYNC_CREATE = 11
