@@ -5,6 +5,7 @@ from enum import Enum, IntEnum
 import traceback
 import asyncio
 import io
+import msgpack
 
 import checks
 import utils
@@ -20,6 +21,7 @@ class SyncDirection(Enum):
 class SyncType(IntEnum):
     MESSAGES = 0
     BANS = 1
+    ROLE = 2
 
 
 class SyncListMenu(wkr.ListMenu):
@@ -71,8 +73,13 @@ class Sync(wkr.Module):
         await self.bot.subscribe("*.guild_ban_add", shared=True)
         await self.bot.subscribe("*.guild_ban_remove", shared=True)
 
+        await self.bot.subscribe("*.guild_member_add", shared=True)
+        await self.bot.subscribe("*.guild_member_update", shared=True)
+        await self.bot.subscribe("*.guild_member_remove", shared=True)
+
         await self.bot.subscribe("*.channel_delete", shared=True)
         await self.bot.subscribe("*.guild_delete", shared=True)
+        await self.bot.subscribe("*.guild_role_delete", shared=True)
 
     @wkr.Module.command()
     async def sync(self, ctx):
@@ -330,7 +337,7 @@ class Sync(wkr.Module):
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
-    async def bans(self, ctx, direction, target):
+    async def bans(self, ctx, direction, target: wkr.FullGuildConverter):
         """
         Sync bans from one server to another
 
@@ -353,7 +360,7 @@ class Sync(wkr.Module):
             raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
                               f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
 
-        guild = await self.client.get_full_guild(target)
+        guild = await target(ctx)
         await self._check_admin_on(guild, ctx)
 
         async def _create_ban_sync(target, source):
@@ -426,9 +433,149 @@ class Sync(wkr.Module):
             except Exception:
                 traceback.print_exc()
 
+    @sync.command(aliases=("members", "assignments"))
+    @wkr.guild_only
+    @checks.has_permissions_level(destructive=True)
+    @wkr.bot_has_permissions(administrator=True)
+    @checks.is_premium(checks.PremiumLevel.THREE)
+    async def role(self, ctx, role_a: wkr.RoleConverter, direction, role_b: wkr.RoleConverter):
+        """
+        Sync role assignments for one role to another role
+        The roles can be on different servers
+
+        **Creating assignment loops with this is highly discouraged. This also applies to the `both` direction.**
+
+
+        __Arguments__
+
+        **source_role**: The id of the first role (role A)
+        **direction**: `from` or `to`
+        **target**: The id of the second role (role B)
+
+
+        __Examples__
+
+        Adding role A to member X will also add role B to member X:
+        ```{b.prefix}sync role 410288579140354049 from 410488579140354049```
+        Adding role B to member X will also add role A to member X:
+        ```{b.prefix}sync role 410288579140354049 to 410488579140354049```
+        Both combined:
+        ```{b.prefix}sync role 410288579140354049 both 410488579140354049```
+        """
+        try:
+            direction = getattr(SyncDirection, direction.upper())
+        except AttributeError:
+            raise ctx.f.ERROR(f"`{direction}` is **not a valid sync direction**.\n"
+                              f"Choose from `{', '.join([l.name.lower() for l in SyncDirection])}`.")
+
+        if direction == SyncDirection.BOTH:
+            raise ctx.f.ERROR("Syncing role assignments in **both directions can cause bugs**."
+                              "This will eventually be fixed at some point.")
+
+        source = await role_a(ctx)
+        source_guild = await ctx.client.get_full_guild(source.guild_id)
+        await self._check_admin_on(source_guild, ctx)
+        target = await role_b(ctx)
+        target_guild = await ctx.client.get_full_guild(target.guild_id)
+        await self._check_admin_on(target_guild, ctx)
+
+        async def _create_role_sync(target_role, source_role):
+            sync_id = utils.unique_id()
+            try:
+                await ctx.bot.db.premium.syncs.insert_one({
+                    "_id": sync_id,
+                    "guilds": [target_guild.id, source_guild.id],
+                    "type": SyncType.ROLE,
+                    "target": target_role.id,
+                    "target_guild": target_role.guild_id,
+                    "source": source_role.id,
+                    "source_guild": source_role.guild_id,
+                    "uses": 0
+                })
+            except pymongo.errors.DuplicateKeyError:
+                await ctx.f_send(
+                    f"Sync from `{source_role.name}` (`{source_role.id}`) to `{target_role.name}` (`{target_role.id}`) "
+                    f"**already exists**.",
+                    f=ctx.f.INFO
+                )
+
+            else:
+                await ctx.f_send(
+                    f"Successfully **created sync** from `{source_role.name}` (`{source_role.id}`) to "
+                    f"`{target_role.name}` (`{target_role.id}`) with the id `{sync_id}`",
+                    f=ctx.f.SUCCESS
+                )
+                await ctx.bot.create_audit_log(
+                    utils.AuditLogType.ROLE_SYNC_CREATE, [source_guild.id, target_guild.id], ctx.author.id,
+                    {"source": source.id, "target": target.id, "id": sync_id}
+                )
+
+        if direction == SyncDirection.FROM or direction == SyncDirection.BOTH:
+            await _create_role_sync(source, target)
+
+        if direction == SyncDirection.TO or direction == SyncDirection.BOTH:
+            await _create_role_sync(target, source)
+
+    @wkr.Module.listener()
+    async def on_guild_member_add(self, _, data):
+        await self.client.redis.hset(
+            f"role_syncs:{data['guild_id']}",
+            data['user']['id'],
+            msgpack.packb(data["roles"])
+        )
+
+    @wkr.Module.listener()
+    async def on_guild_member_update(self, _, data):
+        try:
+            prev_roles = []
+            cached = await self.client.redis.hget(f"role_syncs:{data['guild_id']}", data['user']['id'])
+            if cached is not None:
+                prev_roles = msgpack.unpackb(cached)
+
+            added_roles = [r for r in data["roles"] if r not in prev_roles]
+            removed_roles = [r for r in prev_roles if r not in data["roles"]]
+
+        finally:
+            await self.client.redis.hset(
+                f"role_syncs:{data['guild_id']}",
+                data['user']['id'],
+                msgpack.packb(data["roles"])
+            )
+
+        for role_id in added_roles:
+            syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
+            async for sync in syncs:
+                await self.client.add_role(
+                    wkr.Snowflake(sync["target_guild"]),
+                    wkr.Snowflake(data["user"]["id"]),
+                    wkr.Snowflake(sync["target"]),
+                    reason=f"Role sync {sync['_id']}"
+                )
+
+        for role_id in removed_roles:
+            syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
+            async for sync in syncs:
+                await self.client.remove_role(
+                    wkr.Snowflake(sync["target_guild"]),
+                    wkr.Snowflake(data["user"]["id"]),
+                    wkr.Snowflake(sync["target"]),
+                    reason=f"Role sync {sync['_id']}"
+                )
+
+    @wkr.Module.listener()
+    async def on_guild_member_remove(self, _, data):
+        await self.client.redis.hdel(
+            f"role_syncs:{data['guild_id']}",
+            data['user']['id']
+        )
+
+    @wkr.Module.listener()
+    async def on_guild_role_delete(self, _, data):
+        await self.bot.db.premium.syncs.delete_many({"$or": [{"source": data["role_id"]}, {"target": data["role_id"]}]})
+
     @wkr.Module.listener()
     async def on_guild_delete(self, _, data):
-        await self.bot.db.premium.syncs.delete_many({"$or": [{"source": data["id"]}, {"target": data["id"]}]})
+        await self.bot.db.premium.syncs.delete_many({"guilds": data["id"]})
 
     @wkr.Module.listener()
     async def on_channel_delete(self, _, data):
