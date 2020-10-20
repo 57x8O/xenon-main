@@ -109,7 +109,7 @@ class Backups(wkr.Module):
 
         __Examples__
 
-        No chatlog: ```{b.prefix}backup create```
+        No chatlog: ```{b.prefix}backup create 0```
         50 messages per channel: ```{b.prefix}backup create 50```
         """
         max_backups = MAX_BACKUPS
