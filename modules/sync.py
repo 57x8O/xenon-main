@@ -52,6 +52,13 @@ class SyncListMenu(wkr.ListMenu):
                     f"(`{sync.get('uses', 0)}` ban(s) transferred)"
                 ))
 
+            elif sync["type"] == SyncType.ROLE:
+                items.append((
+                    sync["_id"],
+                    f"Role assignments from `{sync['source']}` to `{sync['target']}`\n"
+                    f"(`{sync.get('uses', 0)}` assignment(s) transferred)"
+                ))
+
         return items
 
 
@@ -551,6 +558,7 @@ class Sync(wkr.Module):
                     wkr.Snowflake(sync["target"]),
                     reason=f"Role sync {sync['_id']}"
                 )
+                await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
 
         for role_id in removed_roles:
             syncs = self.bot.db.premium.syncs.find({"source": role_id, "type": SyncType.ROLE})
@@ -561,6 +569,7 @@ class Sync(wkr.Module):
                     wkr.Snowflake(sync["target"]),
                     reason=f"Role sync {sync['_id']}"
                 )
+                await self.bot.db.premium.syncs.update_one(sync, {"$inc": {"uses": 1}})
 
     @wkr.Module.listener()
     async def on_guild_member_remove(self, _, data):
