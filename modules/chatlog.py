@@ -24,7 +24,7 @@ class ChatlogListMenu(wkr.ListMenu):
         items = []
         async for chatlog in chatlogs:
             items.append((
-                chatlog["_id"],
+                chatlog["_id"].upper(),
                 f"<#{chatlog['channel']}> (`{utils.datetime_to_string(chatlog['timestamp'])} UTC`)"
             ))
 
@@ -155,11 +155,11 @@ class Chatlog(wkr.Module):
             "data": data
         })
 
-        embed = ctx.f.format(f"Successfully **created chatlog** with the id `{chatlog_id}`.", f=ctx.f.SUCCESS)["embed"]
+        embed = ctx.f.format(f"Successfully **created chatlog** with the id `{chatlog_id.upper()}`.", f=ctx.f.SUCCESS)["embed"]
         embed.setdefault("fields", []).append({
             "name": "Usage",
-            "value": f"```{ctx.bot.prefix}chatlog load {chatlog_id}```\n"
-                     f"```{ctx.bot.prefix}chatlog info {chatlog_id}```"
+            "value": f"```{ctx.bot.prefix}chatlog load {chatlog_id.upper()}```\n"
+                     f"```{ctx.bot.prefix}chatlog info {chatlog_id.upper()}```"
         })
         await ctx.client.edit_message(status_msg, embed=embed)
         await ctx.bot.create_audit_log(
@@ -172,7 +172,7 @@ class Chatlog(wkr.Module):
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
-    async def load(self, ctx, chatlog_id, count: int = 1000):
+    async def load(self, ctx, chatlog_id: str.lower, count: int = 1000):
         """
         Load messages from a chatlog
 
@@ -189,7 +189,7 @@ class Chatlog(wkr.Module):
         """
         chatlog_d = await ctx.client.db.premium.chatlogs.find_one({"_id": chatlog_id, "creator": ctx.author.id})
         if chatlog_d is None:
-            raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id}`.")
+            raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id.upper()}`.")
 
         warning_msg = await ctx.f_send("Are you sure that you want to load this chatlog?\n"
                                        "This can take multiple minutes!", f=ctx.f.WARNING)
@@ -223,7 +223,7 @@ class Chatlog(wkr.Module):
 
     @chatlog.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)
-    async def delete(self, ctx, chatlog_id):
+    async def delete(self, ctx, chatlog_id: str.lower):
         """
         Delete one of your chatlogs
         __**This cannot be undone**__
@@ -238,7 +238,7 @@ class Chatlog(wkr.Module):
             raise ctx.f.SUCCESS("Successfully **deleted chatlog**.")
 
         else:
-            raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id}`.")
+            raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id.upper()}`.")
 
     @chatlog.command()
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
@@ -294,7 +294,7 @@ class Chatlog(wkr.Module):
 
     @chatlog.command(aliases=("i",))
     @wkr.cooldown(5, 30)
-    async def info(self, ctx, chatlog_id):
+    async def info(self, ctx, chatlog_id: str.lower):
         """
         Get information about a chatlog
 
@@ -310,7 +310,7 @@ class Chatlog(wkr.Module):
         """
         chatlog = await ctx.client.db.premium.chatlogs.find_one({"_id": chatlog_id, "creator": ctx.author.id})
         if chatlog is None:
-            raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id}`.")
+            raise ctx.f.ERROR(f"You have **no chatlog** with the id `{chatlog_id.upper()}`.")
 
         first_msg = wkr.Snowflake(chatlog["data"][-1]["id"])
         last_msg = wkr.Snowflake(chatlog["data"][0]["id"])
