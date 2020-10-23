@@ -145,8 +145,8 @@ class Backups(wkr.Module):
         embed = ctx.f.format(f"Successfully **created backup** with the id `{backup_id.upper()}`.", f=ctx.f.SUCCESS)["embed"]
         embed.setdefault("fields", []).append({
             "name": "Usage",
-            "value": f"```{ctx.bot.prefix}backup load {backup_id} {chatlog if chatlog > 0 else ''}```\n"
-                     f"```{ctx.bot.prefix}backup info {backup_id}```"
+            "value": f"```{ctx.bot.prefix}backup load {backup_id.upper()} {chatlog if chatlog > 0 else ''}```\n"
+                     f"```{ctx.bot.prefix}backup info {backup_id.upper()}```"
         })
         await ctx.client.edit_message(status_msg, embed=embed)
         await ctx.bot.create_audit_log(utils.AuditLogType.BACKUP_CREATE, [ctx.guild_id], ctx.author.id)
@@ -157,7 +157,7 @@ class Backups(wkr.Module):
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
-    async def load(self, ctx, backup_id, chatlog: int = 0, *options):
+    async def load(self, ctx, backup_id: str.lower, chatlog: int = 0, *options):
         """
         Load a backup
         
@@ -611,7 +611,7 @@ class Backups(wkr.Module):
     @backup.command(aliases=("invites", "inv"))
     @checks.has_permissions_level()
     @wkr.cooldown(1, 10)
-    async def invite(self, ctx, backup_id):
+    async def invite(self, ctx, backup_id: str.lower):
         """
         Create a constant invite that always points to the server where the backup was last loaded
 
@@ -630,21 +630,21 @@ class Backups(wkr.Module):
             projection=("const_invite", "invite")
         )
         if data is None:
-            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id.upper()}`.")
 
         if data.get("const_invite"):
-            raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id}` is **enabled**."
+            raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id.upper()}` is **enabled**."
                              f"\n\n__Constant Url__: https://xenon.bot/iv/{backup_id}"
                              f"\n__Current Invite__: https://discord.gg/{data.get('invite')}")
 
-        raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id}` is "
-                         f"**not enabled**.\nEnabled it with `x?backup invite on {backup_id}`.")
+        raise ctx.f.INFO(f"The **constant backup invite** for the backup with the id `{backup_id.upper()}` is "
+                         f"**not enabled**.\nEnabled it with `x?backup invite on {backup_id.upper()}`.")
 
     @invite.command(aliases=("enable",))
     @checks.has_permissions_level(destructive=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10)
-    async def on(self, ctx, backup_id):
+    async def on(self, ctx, backup_id: str.lower):
         """
         Enables the constant backup invite which always points to the last server where the backup was loaded
 
@@ -663,7 +663,7 @@ class Backups(wkr.Module):
             {"$set": {"const_invite": True}}
         )
         if result.matched_count == 0:
-            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id.upper()}`.")
 
         raise ctx.f.SUCCESS(f"The **constant backup invite** is now **enabled** and will always point to "
                             f"the last server where the backup was loaded.\n"
@@ -675,7 +675,7 @@ class Backups(wkr.Module):
     @checks.has_permissions_level(destructive=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10)
-    async def off(self, ctx, backup_id):
+    async def off(self, ctx, backup_id: str.lower):
         """
         Disables the constant automatic backup invite
 
@@ -694,7 +694,7 @@ class Backups(wkr.Module):
             {"$set": {"const_invite": False}}
         )
         if result.matched_count == 0:
-            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id.upper()}`.")
 
         raise ctx.f.SUCCESS("Successfully **disabled the automatic backup invite**.")
 
