@@ -29,7 +29,7 @@ class BackupListMenu(wkr.ListMenu):
         items = []
         async for backup in backups:
             items.append((
-                backup["_id"] + (" ⏲️" if backup.get("interval") else ""),
+                backup["_id"].upper() + (" ⏲️" if backup.get("interval") else ""),
                 f"{backup['data']['name']} (`{utils.datetime_to_string(backup['timestamp'])} UTC`)"
             ))
 
@@ -58,14 +58,14 @@ class Backups(wkr.Module):
 
     @backup.command(hidden=True)
     @checks.is_staff(level=checks.StaffLevel.ADMIN)
-    async def transfer(self, ctx, backup_id, user: wkr.UserConverter):
+    async def transfer(self, ctx, backup_id: str.lower, user: wkr.UserConverter):
         """
         Transfer a backup to the specified user
         """
         user = await user(ctx)
         res = await ctx.bot.db.backups.update_one({"_id": backup_id}, {"$set": {"creator": str(user.id)}})
         if res.matched_count == 0:
-            raise ctx.f.ERROR(f"There is **no backup** with the id `{backup_id}`.")
+            raise ctx.f.ERROR(f"There is **no backup** with the id `{backup_id.upper()}`.")
 
         raise ctx.f.SUCCESS(f"Successfully transferred backup.")
 
@@ -113,11 +113,11 @@ class Backups(wkr.Module):
                 f"members and channels containing messages. Try to create a new backup with less messages (chatlog)."
             )
 
-        embed = ctx.f.format(f"Successfully **created backup** with the id `{backup_id}`.", f=ctx.f.SUCCESS)["embed"]
+        embed = ctx.f.format(f"Successfully **created backup** with the id `{backup_id.upper()}`.", f=ctx.f.SUCCESS)["embed"]
         embed.setdefault("fields", []).append({
             "name": "Usage",
-            "value": f"```{ctx.bot.prefix}backup load {backup_id}```\n"
-                     f"```{ctx.bot.prefix}backup info {backup_id}```"
+            "value": f"```{ctx.bot.prefix}backup load {backup_id.upper()}```\n"
+                     f"```{ctx.bot.prefix}backup info {backup_id.upper()}```"
         })
         await ctx.client.edit_message(status_msg, embed=embed)
         await ctx.bot.create_audit_log(utils.AuditLogType.BACKUP_CREATE, [ctx.guild_id], ctx.author.id)
@@ -127,7 +127,7 @@ class Backups(wkr.Module):
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
-    async def load(self, ctx, backup_id, *options):
+    async def load(self, ctx, backup_id: str.lower, *options):
         """
         Load a backup
         
@@ -148,7 +148,7 @@ class Backups(wkr.Module):
         """
         backup_d = await ctx.client.db.backups.find_one({"_id": backup_id, "creator": ctx.author.id})
         if backup_d is None:
-            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id.upper()}`.")
 
         warning_msg = await ctx.f_send("Are you sure that you want to load this backup?\n"
                                        f"Please put the managed role called `{ctx.bot.user.name}` above all other "
@@ -221,7 +221,7 @@ class Backups(wkr.Module):
 
     @backup.command(aliases=("del", "remove", "rm"))
     @wkr.cooldown(5, 30)
-    async def delete(self, ctx, backup_id):
+    async def delete(self, ctx, backup_id: str.lower):
         """
         Delete one of your backups
         
@@ -238,7 +238,7 @@ class Backups(wkr.Module):
             raise ctx.f.SUCCESS("Successfully **deleted backup**.")
 
         else:
-            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id.upper()}`.")
 
     @backup.command(aliases=("clear",))
     @wkr.cooldown(1, 60, bucket=wkr.CooldownType.GUILD)
@@ -313,7 +313,7 @@ class Backups(wkr.Module):
 
     @backup.command(aliases=("i",))
     @wkr.cooldown(5, 30)
-    async def info(self, ctx, backup_id):
+    async def info(self, ctx, backup_id: str.lower):
         """
         Get information about a backup
 
@@ -329,7 +329,7 @@ class Backups(wkr.Module):
         """
         backup = await ctx.client.db.backups.find_one({"_id": backup_id, "creator": ctx.author.id})
         if backup is None:
-            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id}`.")
+            raise ctx.f.ERROR(f"You have **no backup** with the id `{backup_id.upper()}`.")
 
         backup["data"].pop("members", None)
         guild = wkr.Guild(backup["data"])
