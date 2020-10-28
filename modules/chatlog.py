@@ -144,7 +144,7 @@ class Chatlog(wkr.Module):
             )
 
         status_msg = await ctx.f_send("**Creating Chatlog** ...", f=ctx.f.WORKING)
-        data = await self._create_chatlog(ctx.channel_id, count, before=status_msg.id)
+        data = await self._create_chatlog(ctx.channel_id, count, before=status_msg)
         chatlog_id = utils.unique_id()
         await ctx.bot.db.premium.chatlogs.insert_one({
             "_id": chatlog_id,
