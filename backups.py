@@ -380,7 +380,7 @@ class BackupLoader:
                             **msg
                         )
                         if msg["pinned"]:
-                            pass  # await self.client.pin_message(new_msg)
+                            await self.client.pin_message(new_msg)
                     except wkr.NotFound:
                         break
 
