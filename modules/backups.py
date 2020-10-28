@@ -174,8 +174,8 @@ class Backups(wkr.Module):
         __Examples__
 
         Default options: ```{b.prefix}backup load oj1xky11871fzrbu```
-        Only roles: ```{b.prefix}backup load oj1xky11871fzrbu !* roles```
-        Everything but bans: ```{b.prefix}backup load oj1xky11871fzrbu !bans```
+        Only roles: ```{b.prefix}backup load oj1xky11871fzrbu 0 !* roles```
+        Everything but bans: ```{b.prefix}backup load oj1xky11871fzrbu 0 !bans```
         """
         backup_d = await self._retrieve_backup(ctx.author.id, backup_id)
         if backup_d is None:
