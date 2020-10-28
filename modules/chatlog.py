@@ -53,7 +53,7 @@ class Chatlog(wkr.Module):
         """
         await ctx.invoke("help chatlog")
 
-    async def _create_chatlog(self, channel_id, count):
+    async def _create_chatlog(self, channel_id, count, before=None):
         return [
             {
                 "id": message.id,
@@ -69,7 +69,7 @@ class Chatlog(wkr.Module):
                 "pinned": message.pinned,
                 "embeds": message.embeds
             }
-            async for message in self.client.iter_messages(wkr.Snowflake(channel_id), count)
+            async for message in self.client.iter_messages(wkr.Snowflake(channel_id), count, before=before)
         ]
 
     async def _load_chatlog(self, data, channel_id, count):
@@ -144,7 +144,7 @@ class Chatlog(wkr.Module):
             )
 
         status_msg = await ctx.f_send("**Creating Chatlog** ...", f=ctx.f.WORKING)
-        data = await self._create_chatlog(ctx.channel_id, count)
+        data = await self._create_chatlog(ctx.channel_id, count, before=status_msg.id)
         chatlog_id = utils.unique_id()
         await ctx.bot.db.premium.chatlogs.insert_one({
             "_id": chatlog_id,
