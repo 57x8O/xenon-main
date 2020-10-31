@@ -147,7 +147,7 @@ class Sync(wkr.Module):
         if not perms.administrator:
             raise ctx.f.ERROR("You **need to have `administrator`** in the target server.")
 
-        bot = await self.client.get_bot_member(guild.id)
+        bot = await self.client.fetch_bot_member(guild)
         if bot is None:
             raise ctx.f.ERROR("The bot **needs to be member** of the target server.")
 
@@ -195,7 +195,8 @@ class Sync(wkr.Module):
         options.update(**utils.backup_options(extra_events))
 
         channel = await target(ctx)
-        guild = await self.client.get_full_guild(channel.guild_id)
+        guild = await self.client.fetch_full_guild(channel.guild_id)
+
         await self._check_admin_on(guild, ctx)
 
         async def _create_msg_sync(target_id, source_id):
@@ -406,7 +407,7 @@ class Sync(wkr.Module):
 
             self.bot.schedule(_copy_bans())
 
-        ctx_guild = await ctx.get_guild()
+        ctx_guild = await ctx.fetch_guild()
         if direction == SyncDirection.FROM or direction == SyncDirection.BOTH:
             await _create_ban_sync(ctx_guild, guild)
 
@@ -480,10 +481,10 @@ class Sync(wkr.Module):
                               "This will eventually be fixed at some point.")
 
         source = await role_a(ctx)
-        source_guild = await ctx.client.get_full_guild(source.guild_id)
+        source_guild = await ctx.client.fetch_full_guild(wkr.Snowflake(source.guild_id))
         await self._check_admin_on(source_guild, ctx)
         target = await role_b(ctx)
-        target_guild = await ctx.client.get_full_guild(target.guild_id)
+        target_guild = await ctx.client.fetch_full_guild(wkr.Snowflake(target.guild_id))
         await self._check_admin_on(target_guild, ctx)
 
         async def _create_role_sync(target_role, source_role):

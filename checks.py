@@ -99,7 +99,7 @@ def is_premium(level=PremiumLevel.ONE):
             except wkr.NotFound:
                 raise NotPremium(required=level)
 
-            guild = await ctx.bot.get_full_guild(SUPPORT_GUILD)
+            guild = await ctx.bot.fetch_guild(SUPPORT_GUILD)
             roles = member.roles_from_guild(guild)
 
             current = 0

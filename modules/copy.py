@@ -23,9 +23,9 @@ class Copy(wkr.Module):
         **chatlog**: The count of messages to copy per channel
         """
         source_guild = await server_id(ctx)
-        target_guild = await ctx.get_full_guild()
+        target_guild = await ctx.fetch_full_guild()
 
-        bot_member = await ctx.client.get_bot_member(source_guild.id)
+        bot_member = await ctx.client.fetch_bot_member(source_guild)
         if bot_member is None:
             raise wkr.BotMissingPermissions(("administrator",))
 
