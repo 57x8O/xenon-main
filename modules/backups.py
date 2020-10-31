@@ -135,7 +135,7 @@ class Backups(wkr.Module):
             )
 
         status_msg = await ctx.f_send("**Creating Backup** ...", f=ctx.f.WORKING)
-        guild = await ctx.get_full_guild()
+        guild = await ctx.fetch_full_guild()
         backup = BackupSaver(ctx.client, guild)
         await backup.save(chatlog)
 
@@ -208,7 +208,7 @@ class Backups(wkr.Module):
         if data["emoji"]["name"] != "✅":
             return
 
-        guild = await ctx.get_full_guild()
+        guild = await ctx.fetch_full_guild()
         backup = BackupLoader(ctx.client, guild, backup_d["data"], reason="Backup loaded by " + str(ctx.author))
 
         # Inject previous id translators if available
