@@ -348,7 +348,21 @@ class BackupLoader:
                 else:
                     to_load = reversed(messages[:self.chatlog])
 
-                webhook = await self.client.create_webhook(wkr.Snowflake(new_id), name="backup")
+                task = self.client.schedule(self.client.create_webhook(wkr.Snowflake(new_id), name="backup"))
+                webhook = None
+                ratelimited = False
+                while webhook is None:
+                    try:
+                        webhook = await asyncio.wait_for(asyncio.shield(task), timeout=10)
+                    except asyncio.TimeoutError:
+                        self.status = "waiting for long ratelimit"
+                        await self.client.edit_guild(self.guild, name="Ratelimited ...")
+                        ratelimited = True
+
+                if ratelimited:
+                    self.status = "loading messages"
+                    await self.client.edit_guild(self.guild, name="Loading ...")
+
                 for msg in to_load:
                     author = wkr.User(msg["author"])
 
@@ -395,9 +409,13 @@ class BackupLoader:
             finally:
                 semaphore.release()
 
+        tasks = []
         for _channel in self.data["channels"]:
             await semaphore.acquire()
-            self.client.schedule(_load_in_channel(_channel))
+            tasks.append(self.client.schedule(_load_in_channel(_channel)))
+
+        if len(tasks) > 0:
+            await asyncio.wait(tasks)
 
     async def _load_invite(self):
         text_channels = [c for c in self.data["channels"] if c["type"] == wkr.ChannelType.GUILD_TEXT.value]
