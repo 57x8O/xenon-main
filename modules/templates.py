@@ -151,7 +151,7 @@ class Templates(wkr.Module):
         if data["emoji"]["name"] != "✅":
             return
 
-        guild = await ctx.get_full_guild()
+        guild = await ctx.fetch_full_guild()
         backup = BackupLoader(ctx.client, guild, template["data"], reason="Template loaded by " + str(ctx.author))
 
         options = list(options)

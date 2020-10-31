@@ -95,7 +95,7 @@ class Backups(wkr.Module):
             )
 
         status_msg = await ctx.f_send("**Creating Backup** ...", f=ctx.f.WORKING)
-        guild = await ctx.get_full_guild()
+        guild = await ctx.fetch_full_guild()
         backup = BackupSaver(ctx.client, guild)
         await backup.save()
 
@@ -177,7 +177,7 @@ class Backups(wkr.Module):
         if data["emoji"]["name"] != "✅":
             return
 
-        guild = await ctx.get_full_guild()
+        guild = await ctx.fetch_full_guild()
         backup = BackupLoader(ctx.client, guild, backup_d["data"], reason="Backup loaded by " + str(ctx.author))
 
         await self.client.redis.publish("loaders:start", msgpack.packb({
@@ -496,8 +496,9 @@ class Backups(wkr.Module):
     @wkr.Module.task(minutes=random.randint(5, 15))
     async def interval_task(self):
         async def _run_interval_backups(interval):
-            guild = await self.bot.get_full_guild(interval["guild"])
-            if guild is None:
+            try:
+                guild = await self.bot.fetch_full_guild(interval["guild"])
+            except wkr.NotFound:
                 return
 
             backup = BackupSaver(self.bot, guild)
