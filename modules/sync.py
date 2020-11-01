@@ -159,6 +159,7 @@ class Sync(wkr.Module):
     @wkr.guild_only
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
+    @wkr.cooldown(50, 60 * 60, bucket=wkr.CooldownType.GUILD)
     @checks.is_premium()
     async def messages(self, ctx, direction, target: wkr.ChannelConverter, *extra_events):
         """
