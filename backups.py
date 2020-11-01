@@ -327,8 +327,6 @@ class BackupLoader:
         async def _load_in_channel(channel):
             try:
                 messages = self.data.get("messages", {}).get(channel["id"], [])
-                if len(messages) <= 0:
-                    return
 
                 new_id = self.id_translator.get(channel["id"])
                 if new_id is None:
@@ -346,18 +344,26 @@ class BackupLoader:
                             to_load.insert(0, message)
 
                 else:
-                    to_load = reversed(messages[:self.chatlog])
+                    to_load = list(reversed(messages[:self.chatlog]))
+
+                if len(to_load) == 0:
+                    return
 
                 task = self.client.schedule(self.client.create_webhook(wkr.Snowflake(new_id), name="backup"))
-                webhook = None
-                ratelimited = False
-                while webhook is None:
-                    try:
-                        webhook = await asyncio.wait_for(asyncio.shield(task), timeout=10)
-                    except asyncio.TimeoutError:
-                        self.status = "waiting for long ratelimit"
-                        await self.client.edit_guild(self.guild, name="Ratelimited ...")
-                        ratelimited = True
+                try:
+                    webhook = None
+                    ratelimited = False
+                    while webhook is None:
+                        try:
+                            webhook = await asyncio.wait_for(asyncio.shield(task), timeout=10)
+                        except asyncio.TimeoutError:
+                            if not ratelimited:
+                                self.status = "waiting for long ratelimit"
+                                await self.client.edit_guild(self.guild, name="Ratelimited ...")
+                                ratelimited = True
+                except asyncio.CancelledError:
+                    task.cancel()
+                    raise
 
                 if ratelimited:
                     self.status = "loading messages"
@@ -410,12 +416,18 @@ class BackupLoader:
                 semaphore.release()
 
         tasks = []
-        for _channel in self.data["channels"]:
-            await semaphore.acquire()
-            tasks.append(self.client.schedule(_load_in_channel(_channel)))
+        try:
+            for _channel in self.data["channels"]:
+                await semaphore.acquire()
+                tasks.append(self.client.schedule(_load_in_channel(_channel)))
 
-        if len(tasks) > 0:
-            await asyncio.wait(tasks)
+            if len(tasks) > 0:
+                await asyncio.wait(tasks)
+        except asyncio.CancelledError:
+            for task in tasks:
+                task.cancel()
+
+            raise
 
     async def _load_invite(self):
         text_channels = [c for c in self.data["channels"] if c["type"] == wkr.ChannelType.GUILD_TEXT.value]
