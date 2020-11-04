@@ -37,7 +37,7 @@ class Chatlog(wkr.Module):
         await self.bot.db.premium.chatlogs.create_index([("creator", pymongo.ASCENDING)])
         await self.bot.db.premium.chatlogs.create_index([("timestamp", pymongo.ASCENDING)])
 
-    @wkr.Module.task(hours=24)
+    # @wkr.Module.task(hours=24)
     async def message_retention(self):
         await self.bot.db.delete_many({
             "msg_retention": True,
