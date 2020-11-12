@@ -580,29 +580,36 @@ class Backups(wkr.Module):
 
     @wkr.Module.task(minutes=random.randint(5, 15))
     async def interval_task(self):
+        semaphore = asyncio.Semaphore(value=100)
+
         async def _run_interval_backup(interval):
             try:
-                guild = await self.bot.fetch_full_guild(interval["guild"])
-            except wkr.NotFound:
-                return
+                try:
+                    guild = await self.bot.fetch_full_guild(interval["guild"])
+                except wkr.NotFound:
+                    return
 
-            existing = self.bot.db.backups.find(
-                {"data.id": interval["guild"], "interval": True, "creator": interval["user"]},
-                sort=[("timestamp", pymongo.DESCENDING)]
-            )
-            counter = 0
-            async for backup in existing:
-                counter += 1
-                if counter >= interval.get("keep", 1):
-                    await self.bot.db.backups.delete_one({"_id": backup["_id"]})
+                existing = self.bot.db.backups.find(
+                    {"data.id": interval["guild"], "interval": True, "creator": interval["user"]},
+                    sort=[("timestamp", pymongo.DESCENDING)]
+                )
+                counter = 0
+                async for backup in existing:
+                    counter += 1
+                    if counter >= interval.get("keep", 1):
+                        await self.bot.db.backups.delete_one({"_id": backup["_id"]})
 
-            backup = BackupSaver(self.bot, guild)
-            await backup.save(chatlog=interval.get("chatlog", 0))
+                backup = BackupSaver(self.bot, guild)
+                await backup.save(chatlog=interval.get("chatlog", 0))
 
-            await self._store_backup(interval["user"], utils.unique_id(), backup.data, interval=True)
+                await self._store_backup(interval["user"], utils.unique_id(), backup.data, interval=True)
+
+            finally:
+                semaphore.release()
 
         to_backup = self.bot.db.premium.intervals.find({"next": {"$lt": datetime.utcnow()}})
         async for interval in to_backup:
+            await semaphore.acquire()
             self.bot.schedule(_run_interval_backup(interval))
             await self.bot.db.premium.intervals.update_one({"_id": interval["_id"]}, {"$set": {
                 "next": interval["next"] + timedelta(hours=interval["interval"]),
