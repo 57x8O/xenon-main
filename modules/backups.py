@@ -493,7 +493,7 @@ class Backups(wkr.Module):
         else:
             raise ctx.f.ERROR(f"The backup interval is not enabled.")
 
-    @wkr.Module.task(minutes=random.randint(5, 15))
+    # @wkr.Module.task(minutes=random.randint(5, 15))
     async def interval_task(self):
         semaphore = asyncio.Semaphore(value=100)
 
