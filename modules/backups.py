@@ -495,26 +495,33 @@ class Backups(wkr.Module):
 
     @wkr.Module.task(minutes=random.randint(5, 15))
     async def interval_task(self):
+        semaphore = asyncio.Semaphore(value=100)
+
         async def _run_interval_backups(interval):
             try:
-                guild = await self.bot.fetch_full_guild(interval["guild"])
-            except wkr.NotFound:
-                return
+                try:
+                    guild = await self.bot.fetch_full_guild(interval["guild"])
+                except wkr.NotFound:
+                    return
 
-            backup = BackupSaver(self.bot, guild)
-            await backup.save()
+                backup = BackupSaver(self.bot, guild)
+                await backup.save()
 
-            await self.bot.db.backups.delete_one({"creator": interval["user"], "data.id": guild.id, "interval": True})
-            await self.bot.db.backups.insert_one({
-                "_id": utils.unique_id(),
-                "creator": interval["user"],
-                "timestamp": datetime.utcnow(),
-                "interval": True,
-                "data": backup.data
-            })
+                await self.bot.db.backups.delete_one(
+                    {"creator": interval["user"], "data.id": guild.id, "interval": True})
+                await self.bot.db.backups.insert_one({
+                    "_id": utils.unique_id(),
+                    "creator": interval["user"],
+                    "timestamp": datetime.utcnow(),
+                    "interval": True,
+                    "data": backup.data
+                })
+            finally:
+                semaphore.release()
 
         to_backup = self.bot.db.intervals.find({"next": {"$lt": datetime.utcnow()}})
         async for interval in to_backup:
+            await semaphore.acquire()
             self.bot.schedule(_run_interval_backups(interval))
             await self.bot.db.intervals.update_one({"_id": interval["_id"]}, {"$set": {
                 "next": interval["next"] + timedelta(hours=interval["interval"]),
