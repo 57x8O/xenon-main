@@ -580,13 +580,14 @@ class Backups(wkr.Module):
 
     @wkr.Module.task(minutes=random.randint(5, 15))
     async def interval_task(self):
-        semaphore = asyncio.Semaphore(value=100)
+        semaphore = asyncio.Semaphore(value=1)
 
         async def _run_interval_backup(interval):
             try:
                 try:
                     guild = await self.bot.fetch_full_guild(interval["guild"])
-                except wkr.NotFound:
+                except (wkr.NotFound, wkr.Forbidden):
+                    await self.bot.db.intervals.delete_many({"guild": interval["guild"]})
                     return
 
                 existing = self.bot.db.backups.find(
