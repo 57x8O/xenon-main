@@ -587,7 +587,7 @@ class Backups(wkr.Module):
                 try:
                     guild = await self.bot.fetch_full_guild(interval["guild"])
                 except (wkr.NotFound, wkr.Forbidden):
-                    await self.bot.db.intervals.delete_many({"guild": interval["guild"]})
+                    await self.bot.db.premium.intervals.delete_many({"guild": interval["guild"]})
                     return
 
                 existing = self.bot.db.backups.find(
