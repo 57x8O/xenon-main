@@ -114,7 +114,7 @@ class Chatlog(wkr.Module):
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
-    async def create(self, ctx, count: int = 100, before=None):
+    async def create(self, ctx, count: int = 1000, before=None):
         """
         Save the last <count> messages in this channel
 
@@ -340,8 +340,18 @@ class Chatlog(wkr.Module):
                 },
                 {
                     "name": "Time Range",
-                    "value": f"`{utils.datetime_to_string(first_msg.created_at)} UTC ({first_msg.id})`- "
-                             f"`{utils.datetime_to_string(last_msg.created_at)} UTC ({last_msg.id})`",
+                    "value": f"`{utils.datetime_to_string(first_msg.created_at)} UTC`- "
+                             f"`{utils.datetime_to_string(last_msg.created_at)} UTC`",
+                    "inline": True
+                },
+                {
+                    "name": "First ID",
+                    "value": f"`{first_msg.id}`",
+                    "inline": True
+                },
+                {
+                    "name": "Last ID",
+                    "value": f"`{last_msg.id}`",
                     "inline": True
                 }
             ]
