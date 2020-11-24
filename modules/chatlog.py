@@ -135,13 +135,15 @@ class Chatlog(wkr.Module):
             count = min(count, 1000)
             max_chatlogs = 100
 
-        before = ctx.msg
         if before is not None:
             try:
                 int(before)
                 before = wkr.Snowflake(before)
             except ValueError:
-                pass
+                before = ctx.msg
+
+        else:
+            before = ctx.msg
 
         chatlog_count = await ctx.bot.db.premium.chatlogs.count_documents({"creator": ctx.author.id})
         if chatlog_count >= max_chatlogs:
