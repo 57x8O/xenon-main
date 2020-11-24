@@ -114,7 +114,7 @@ class Chatlog(wkr.Module):
     @wkr.bot_has_permissions(administrator=True)
     @checks.is_premium()
     @wkr.cooldown(1, 10, bucket=wkr.CooldownType.GUILD)
-    async def create(self, ctx, count: int = 100):
+    async def create(self, ctx, count: int = 100, before=None):
         """
         Save the last <count> messages in this channel
 
@@ -135,6 +135,14 @@ class Chatlog(wkr.Module):
             count = min(count, 1000)
             max_chatlogs = 100
 
+        before = ctx.msg
+        if before is not None:
+            try:
+                int(before)
+                before = wkr.Snowflake(before)
+            except ValueError:
+                pass
+
         chatlog_count = await ctx.bot.db.premium.chatlogs.count_documents({"creator": ctx.author.id})
         if chatlog_count >= max_chatlogs:
             raise ctx.f.ERROR(
@@ -144,7 +152,7 @@ class Chatlog(wkr.Module):
             )
 
         status_msg = await ctx.f_send("**Creating Chatlog** ...", f=ctx.f.WORKING)
-        data = await self._create_chatlog(ctx.channel_id, count, before=ctx.msg)
+        data = await self._create_chatlog(ctx.channel_id, count, before=before)
         chatlog_id = utils.unique_id()
         await ctx.bot.db.premium.chatlogs.insert_one({
             "_id": chatlog_id,
