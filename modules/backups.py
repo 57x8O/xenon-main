@@ -183,6 +183,7 @@ class Backups(wkr.Module):
         await self.client.redis.publish("loaders:start", msgpack.packb({
             "id": ctx.guild_id,
             "type": "backup",
+            "user_id": ctx.author.id,
             "source_id": backup.data["id"],
             "backup_id": backup_id
         }))
@@ -214,6 +215,7 @@ class Backups(wkr.Module):
             await self.client.redis.publish("loaders:done", msgpack.packb({
                 "id": ctx.guild_id,
                 "type": "backup",
+                "user_id": ctx.author.id,
                 "source_id": backup.data["id"],
                 "backup_id": backup_id
             }))

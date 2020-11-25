@@ -159,6 +159,7 @@ class Templates(wkr.Module):
         await self.client.redis.publish("loaders:start", msgpack.packb({
             "id": ctx.guild_id,
             "type": "template",
+            "user_id": ctx.author.id,
             "source_id": str(backup.data["id"]),
             "template_id": name.strip("/").split("/")[-1]
         }))
@@ -190,6 +191,7 @@ class Templates(wkr.Module):
             await self.client.redis.publish("loaders:done", msgpack.packb({
                 "id": ctx.guild_id,
                 "type": "template",
+                "user_id": ctx.author.id,
                 "source_id": str(backup.data["id"]),
                 "template_id": name.strip("/").split("/")[-1]
             }))
