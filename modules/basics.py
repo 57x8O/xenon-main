@@ -4,6 +4,7 @@ import xenon_worker as wkr
 class Basics(wkr.Module):
     @wkr.Module.command()
     @wkr.has_permissions(administrator=True)
+    @wkr.cooldown(1, 5, bucket=wkr.CooldownType.GUILD)
     async def leave(self, ctx):
         """
         Let the bot leave this server
@@ -116,6 +117,7 @@ class Basics(wkr.Module):
         })
 
     @wkr.Module.command(aliases=("tiers", "pro", "turbo"))
+    @wkr.cooldown(1, 3, bucket=wkr.CooldownType.AUTHOR)
     async def premium(self, ctx):
         """
         Get information about Xenon Premium

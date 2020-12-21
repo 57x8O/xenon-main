@@ -3,6 +3,7 @@ import xenon_worker as wkr
 
 class Premium(wkr.Module):
     @wkr.Module.command(aliases=("chatlog", "chatlogs"))
+    @wkr.cooldown(1, 3, bucket=wkr.CooldownType.AUTHOR)
     async def chatlog(self, ctx):
         """
         Save & load messages from individual channels
@@ -13,6 +14,7 @@ class Premium(wkr.Module):
         await ctx.invoke("premium")
 
     @wkr.Module.command()
+    @wkr.cooldown(1, 3, bucket=wkr.CooldownType.AUTHOR)
     async def sync(self, ctx):
         """
         Sync messages and bans between different servers and channels
@@ -23,6 +25,7 @@ class Premium(wkr.Module):
         await ctx.invoke("premium")
 
     @wkr.Module.command()
+    @wkr.cooldown(1, 3, bucket=wkr.CooldownType.AUTHOR)
     async def copy(self, ctx):
         """
         Copy servers without creating a backup

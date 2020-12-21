@@ -74,6 +74,7 @@ class Templates(wkr.Module):
             return None
 
     @wkr.Module.command(aliases=("temp", "tpl"))
+    @wkr.cooldown(1, 3, bucket=wkr.CooldownType.AUTHOR)
     async def template(self, ctx):
         """
         Find and load templates
@@ -82,7 +83,7 @@ class Templates(wkr.Module):
         await ctx.invoke("help template")
 
     @template.command(aliases=("c",), hidden=True)
-    @wkr.cooldown(1, 30)
+    @wkr.cooldown(1, 3)
     async def create(self, ctx):
         raise ctx.f.ERROR("Please use https://templates.xenon.bot to add new templates, "
                           "you can find help on the [wiki](https://wiki.xenon.bot/en/templates#creating-a-template) "
