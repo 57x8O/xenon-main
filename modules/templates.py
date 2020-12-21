@@ -89,7 +89,7 @@ class Templates(wkr.Module):
                           "you can find help on the [wiki](https://wiki.xenon.bot/en/templates#creating-a-template) "
                           "for how to create new templates.")
 
-    # @template.command(aliases=("l",))
+    @template.command(aliases=("l",))
     @wkr.guild_only
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)
