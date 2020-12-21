@@ -215,7 +215,7 @@ class Templates(wkr.Module):
         await menu.start()
 
     @template.command(aliases=("i",))
-    @wkr.cooldown(5, 30)
+    @wkr.cooldown(5, 30, bucket=wkr.CooldownType.GUILD)
     async def info(self, ctx, name):
         """
         Get information about a template
