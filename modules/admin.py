@@ -219,6 +219,7 @@ class Admin(wkr.Module):
             raise ctx.f.ERROR(f"`{user}` is **not in the staff list**.")
 
     @wkr.Module.command(hidden=True)
+    @wkr.cooldown(1, 5, bucket=wkr.CooldownType.GUILD)
     async def loader(self, ctx, server_id=None):
         server_id = server_id or ctx.guild_id
         status = await ctx.bot.redis.get(f"loaders:{server_id}")

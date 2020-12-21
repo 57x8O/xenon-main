@@ -70,6 +70,7 @@ class Backups(wkr.Module):
         )
 
     @wkr.Module.command(aliases=("backups", "bu"))
+    @wkr.cooldown(1, 3, bucket=wkr.CooldownType.GUILD)
     async def backup(self, ctx):
         """
         Create & load private backups of your servers
