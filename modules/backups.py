@@ -123,7 +123,7 @@ class Backups(wkr.Module):
         await ctx.client.edit_message(status_msg, embed=embed)
         await ctx.bot.create_audit_log(utils.AuditLogType.BACKUP_CREATE, [ctx.guild_id], ctx.author.id)
 
-    @backup.command(aliases=("l",))
+    # @backup.command(aliases=("l",))
     @wkr.guild_only
     @checks.has_permissions_level(destructive=True)
     @wkr.bot_has_permissions(administrator=True)

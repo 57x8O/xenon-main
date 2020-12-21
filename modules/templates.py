@@ -214,7 +214,7 @@ class Templates(wkr.Module):
         menu = TemplateListMenu(ctx, search)
         await menu.start()
 
-    @template.command(aliases=("i",))
+    # @template.command(aliases=("i",))
     @wkr.cooldown(5, 30, bucket=wkr.CooldownType.GUILD)
     async def info(self, ctx, name):
         """
